@@ -12,7 +12,8 @@
 #include "Resource.h"
 
 #include "CreditShoppingTask.h"
-#include "BattleTask.h"
+#include "RoguelikeBattleTaskPlugin.h"
+#include "RoguelikeFormationTaskPlugin.h"
 #include "InfrastDormTask.h"
 #include "InfrastInfoTask.h"
 #include "InfrastMfgTask.h"
@@ -328,7 +329,7 @@ bool asst::Assistant::append_recruit(unsigned max_times, const std::vector<int>&
     return true;
 }
 
-#ifdef ASST_DEBUG
+//#ifdef ASST_DEBUG
 bool Assistant::append_debug()
 {
     LogTraceFunction;
@@ -340,13 +341,18 @@ bool Assistant::append_debug()
 
     {
         constexpr static const char* DebugTaskChain = "Debug";
-        auto debug_task_ptr = std::make_shared<BattleTask>(task_callback, (void*)this, DebugTaskChain);
+
+        auto debug_task_ptr = std::make_shared<ProcessTask>(task_callback, (void*)this, DebugTaskChain);
+        debug_task_ptr->set_tasks({ "Roguelike1Begin" });
+        debug_task_ptr->regiseter_plugin<RoguelikeFormationTaskPlugin>();
+        debug_task_ptr->regiseter_plugin<RoguelikeBattleTaskPlugin>();
+
         m_tasks_queue.emplace(debug_task_ptr);
     }
 
     return true;
 }
-#endif
+//#endif
 
 bool Assistant::start_recruit_calc(const std::vector<int>& select_level, bool set_time)
 {

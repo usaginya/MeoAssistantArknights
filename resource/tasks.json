@@ -2720,6 +2720,45 @@
             100
         ]
     },
+    "InfrastClueSelfMaybeFull": {
+        "Doc": "有一种情况是，自己的线索满了，但是却没有new的标记",
+        "roi": [
+            1110,
+            89,
+            170,
+            177
+        ],
+        "action": "clickSelf",
+        "next": [
+            "InfrastClueSelfFull",
+            "CloseCluePage"
+        ]
+    },
+    "InfrastClueSelfFull": {
+        "roi": [
+            286,
+            550,
+            366,
+            130
+        ],
+        "next": [
+            "CloseCluePageThenSendClue"
+        ]
+    },
+    "CloseCluePageThenSendClue": {
+        "template": "CloseCluePage.png",
+        "action": "clickSelf",
+        "roi": [
+            930,
+            50,
+            120,
+            120
+        ],
+        "next": [
+            "CloseCluePageThenSendClue",
+            "SendClues"
+        ]
+    },
     "InfrastClueSelfNew": {
         "template": "ClueNew.png",
         "action": "clickSelf",
@@ -2819,7 +2858,8 @@
     "UnlockClues": {
         "template": "UnlockClues.png",
         "action": "clickSelf",
-        "templThreshold": 0.95,
+        "cache": false,
+        "templThreshold": 0.9,
         "roi": [
             200,
             600,
@@ -2828,7 +2868,21 @@
         ],
         "rearDelay": 5000,
         "next": [
+            "UnlockCluesIsFake",
             "InfrastBottomLeftTab"
+        ]
+    },
+    "UnlockCluesIsFake": {
+        "Doc": "点了一次解锁了还在这个界面，说明是识别错了",
+        "cache": false,
+        "template": "UnlockClues.png",
+        "action": "clickSelf",
+        "templThreshold": 0.9,
+        "roi": [
+            200,
+            600,
+            700,
+            120
         ]
     },
     "ReceptionFlag": {
@@ -3046,7 +3100,9 @@
             41
         ],
         "next": [
-            "InfrastClueSelfNew"
+            "InfrastClueSelfNew",
+            "InfrastClueFriendNew",
+            "ReceptionFlag"
         ]
     },
     "ClueGiveToNextPage": {
@@ -3075,7 +3131,13 @@
         "algorithm": "JustReturn",
         "preDelay": 500,
         "rearDelay": 0,
-        "Doc": "pre 是从点击干员，到干员信息弹出来等待的时间；rear是干员上场，到设置朝向之间等待的时间"
+        "Doc": "pre 是从点击干员，到干员信息弹出来等待的时间；rear 是干员上场，到设置朝向之间等待的时间"
+    },
+    "BattleSwipeOper": {
+        "algorithm": "JustReturn",
+        "preDelay": 1000,
+        "rearDelay": 300,
+        "Doc": "pre 是将干员滑动到场上的 duration；rear 是设置干员朝向滑动的 duration"
     },
     "BattleOpersFlag": {
         "templThreshold": 0.85,
@@ -3235,6 +3297,927 @@
         "algorithm": "hash",
         "hash": [
             "3ffc7ffe7c3ff00ff007f007f00ffc0f7fff3ffe1ffe00fc01f803f00ff00fc0"
+        ]
+    },
+    "BattleHpFlag": {
+        "roi": [
+            400,
+            0,
+            650,
+            60
+        ],
+        "rectMove": [
+            40,
+            0,
+            100,
+            35
+        ]
+    },
+    "BattleHpFlag2": {
+        "roi": [
+            400,
+            0,
+            650,
+            60
+        ],
+        "rectMove": [
+            40,
+            0,
+            100,
+            35
+        ]
+    },
+    "BattleHpChannelH": {
+        "algorithm": "hash",
+        "hash": [
+        ],
+        "maskRange": [
+            0,
+            1
+        ]
+    },
+    "BattleHpChannelS": {
+        "algorithm": "hash",
+        "hash": [
+        ],
+        "maskRange": [
+            120,
+            150
+        ]
+    },
+    "BattleHpChannelV": {
+        "algorithm": "hash",
+        "hash": [
+        ],
+        "maskRange": [
+            170,
+            255
+        ]
+    },
+    "BattleHp0": {
+        "algorithm": "hash",
+        "hash": [
+            "03e007fc3c0638066003400140014001c001400140016003600338061e1c07f8"
+        ]
+    },
+    "BattleHp1": {
+        "algorithm": "hash",
+        "hash": [
+            "003f01ff1ffffe0f000700070007000700070007000700070007000700070007"
+        ]
+    },
+    "BattleHp2": {
+        "algorithm": "hash",
+        "hash": [
+            "07e03c3c2007c0030003000300030007001c003800e003c004003800f800ffff"
+        ]
+    },
+    "BattleHp3": {
+        "algorithm": "hash",
+        "hash": [
+            "0ff07e78700ee00700070006000e03f80078000e000700078007e00e703e1ff8"
+        ]
+    },
+    "BattleHp4": {
+        "algorithm": "hash",
+        "hash": [
+            "0010003c007c007c01dc039c061c0c1c381c301c783effff001c001c001c001c"
+        ]
+    },
+    "BattleHp5": {
+        "algorithm": "hash",
+        "hash": [
+            "1ff87ffe7000600060006000fff0f038e00e0006000700078007e00e703e1ff0"
+        ]
+    },
+    "BattleHp6": {
+        "algorithm": "hash",
+        "hash": [
+            "018002000e000c0010003fe07808f004c006800380018003c007e006300c1ff0"
+        ]
+    },
+    "BattleHp7": {
+        "algorithm": "hash",
+        "hash": [
+            "7fffffff00070006000e003800380070004001c0018003800e000e001c001000"
+        ]
+    },
+    "BattleHp8": {
+        "algorithm": "hash",
+        "hash": [
+            "0ff01038600ee006e006600670081ff01c7860068007800180018007600e1ff8"
+        ]
+    },
+    "BattleHp9": {
+        "algorithm": "hash",
+        "hash": [
+            "07e01e78700e6006e007e007e0076006700e1ffe011800700060008001800700"
+        ]
+    },
+    "BattleSpeedUp": {
+        "action": "clickSelf",
+        "roi": [
+            1025,
+            0,
+            149,
+            153
+        ],
+        "maskRange": [
+            100,
+            255
+        ],
+        "templThreshold": 0.95,
+        "preDelay": 2000
+    },
+    "BattleSkillReady": {
+        "roi": [
+            0,
+            0,
+            1280,
+            580
+        ],
+        "maskRange": [
+            1,
+            255
+        ],
+        "rectMove": [
+            0,
+            100,
+            40,
+            40
+        ]
+    },
+    "BattleUseSkill": {
+        "algorithm": "justReturn",
+        "action": "clickRect",
+        "specificRect": [
+            820,
+            380,
+            100,
+            100
+        ],
+        "preDelay": 1000,
+        "rearDelay": 200
+    },
+    "Roguelike1Begin": {
+        "algorithm": "justReturn",
+        "next": [
+            "Roguelike1Start",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps",
+            "Roguelike1GetDrop1",
+            "Roguelike1GetDrop2",
+            "Roguelike1GetDrop3",
+            "Roguelike1GetDropLeave",
+            "Roguelike1StageEncounterFree",
+            "Roguelike1StageEncounterLeave",
+            "Roguelike1StageEncounterUnknown",
+            "Roguelike1StageTraderInvestSystem",
+            "Roguelike1StageTraderLeave"
+        ]
+    },
+    "Roguelike1Start": {
+        "action": "clickSelf",
+        "roi": [
+            1026,
+            470,
+            254,
+            248
+        ],
+        "rearDelay": 500,
+        "next": [
+            "Roguelike1LastReward",
+            "Roguelike1Recruit1"
+        ]
+    },
+    "Roguelike1LastReward": {
+        "action": "clickSelf",
+        "roi": [
+            174,
+            151,
+            935,
+            533
+        ],
+        "next": [
+            "Roguelike1LastRewardConfirm"
+        ]
+    },
+    "Roguelike1LastRewardConfirm": {
+        "template": "Roguelike1RecruitConfirm.png",
+        "action": "clickSelf",
+        "roi": [
+            174,
+            151,
+            935,
+            533
+        ],
+        "next": [
+            "Roguelike1Recruit1"
+        ]
+    },
+    "Roguelike1Recruit1": {
+        "action": "clickSelf",
+        "roi": [
+            0,
+            153,
+            365,
+            532
+        ],
+        "next": [
+            "Roguelike1RecruitConfirm"
+        ]
+    },
+    "Roguelike1RecruitConfirm": {
+        "action": "clickSelf",
+        "roi": [
+            0,
+            483,
+            1280,
+            200
+        ],
+        "next": [
+            "Roguelike1Team3"
+        ]
+    },
+    "Roguelike1Team3": {
+        "action": "clickSelf",
+        "roi": [
+            601,
+            153,
+            363,
+            529
+        ],
+        "next": [
+            "Roguelike1TeamConfirm"
+        ]
+    },
+    "Roguelike1TeamConfirm": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            153,
+            1280,
+            529
+        ],
+        "next": [
+            "Roguelike1Recruit"
+        ]
+    },
+    "Roguelike1Recruit": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            190,
+            470,
+            900,
+            154
+        ],
+        "next": [
+            "Roguelike1ChooseOper"
+        ]
+    },
+    "Roguelike1ChooseOper": {
+        "algorithm": "OcrDetect",
+        "action": "clickSelf",
+        "cache": false,
+        "text": [
+            "煌",
+            "银灰",
+            "陈",
+            "帕拉斯",
+            "棘刺",
+            "梓兰",
+            "芙蓉",
+            "安塞尔"
+        ],
+        "roi": [
+            560,
+            69,
+            666,
+            614
+        ],
+        "next": [
+            "Roguelike1ChooseOperConfirm"
+        ]
+    },
+    "Roguelike1ChooseOperConfirm": {
+        "action": "clickself",
+        "roi": [
+            1016,
+            602,
+            264,
+            118
+        ],
+        "next": [
+            "Roguelike1RecruitSkip"
+        ]
+    },
+    "Roguelike1RecruitSkip": {
+        "template": "RecruitSkip.png",
+        "action": "clickSelf",
+        "roi": [
+            1100,
+            0,
+            180,
+            150
+        ],
+        "next": [
+            "Roguelike1RecruitSkip",
+            "Roguelike1RecruitWithoutButton"
+        ]
+    },
+    "Roguelike1RecruitWithoutButton": {
+        "template": "RecruitSkipWithoutButton.png",
+        "algorithm": "justReturn",
+        "action": "clickRect",
+        "specificRect": [
+            1180,
+            15,
+            85,
+            60
+        ],
+        "next": [
+            "Roguelike1Recruit",
+            "Roguelike1EnterAfterRecruit",
+            "Roguelike1RecruitWithoutButton"
+        ]
+    },
+    "Roguelike1EnterAfterRecruit": {
+        "action": "clickSelf",
+        "roi": [
+            1078,
+            234,
+            202,
+            239
+        ],
+        "rearDelay": 3000,
+        "next": [
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ]
+    },
+    "Roguelike1StageTrader": {
+        "Doc": "诡异行商（交易所）",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            53,
+            1280,
+            554
+        ],
+        "next": [
+            "Roguelike1StageTraderEnter",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ]
+    },
+    "Roguelike1StageTraderEnter": {
+        "action": "clickSelf",
+        "roi": [
+            1035,
+            374,
+            226,
+            220
+        ],
+        "next": [
+            "Roguelike1StageTraderInvestSystem",
+            "Roguelike1StageTraderLeave"
+        ]
+    },
+    "Roguelike1StageTraderInvestSystem": {
+        "action": "clickSelf",
+        "roi": [
+            365,
+            51,
+            276,
+            216
+        ],
+        "next": [
+            "Roguelike1StageTraderInvestSystemEnter"
+        ]
+    },
+    "Roguelike1StageTraderInvestSystemEnter": {
+        "action": "clickSelf",
+        "roi": [
+            417,
+            228,
+            502,
+            247
+        ],
+        "next": [
+            "Roguelike1StageTraderInvestConfirm",
+            "Roguelike1StageTraderInvestCancel"
+        ]
+    },
+    "Roguelike1StageTraderInvestConfirm": {
+        "action": "clickSelf",
+        "roi": [
+            852,
+            422,
+            278,
+            144
+        ],
+        "rearDelay": 500,
+        "templThreshold": 0.97,
+        "next": [
+            "Roguelike1StageTraderInvestConfirm",
+            "Roguelike1StageTraderInvestCancel"
+        ]
+    },
+    "Roguelike1StageTraderInvestCancel": {
+        "action": "clickSelf",
+        "roi": [
+            507,
+            418,
+            242,
+            149
+        ],
+        "next": [
+            "Roguelike1StageTraderInvestSystemLeave"
+        ]
+    },
+    "Roguelike1StageTraderInvestSystemLeave": {
+        "action": "clickSelf",
+        "roi": [
+            682,
+            420,
+            245,
+            143
+        ],
+        "next": [
+            "Roguelike1StageTraderLeave"
+        ]
+    },
+    "Roguelike1StageTraderLeave": {
+        "action": "clickSelf",
+        "roi": [
+            1046,
+            443,
+            234,
+            204
+        ],
+        "next": [
+            "Roguelike1StageTraderLeaveConfirm"
+        ]
+    },
+    "Roguelike1StageTraderLeaveConfirm": {
+        "action": "clickSelf",
+        "roi": [
+            985,
+            447,
+            295,
+            203
+        ],
+        "next": [
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ]
+    },
+    "Roguelike1StageEncounter": {
+        "Doc": "不期而遇（随机奖励）",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            53,
+            1280,
+            554
+        ],
+        "next": [
+            "Roguelike1StageEncounterEnter",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ]
+    },
+    "Roguelike1StageEncounterEnter": {
+        "action": "clickSelf",
+        "roi": [
+            1037,
+            374,
+            221,
+            221
+        ],
+        "next": [
+            "Roguelike1StageEncounterFree",
+            "Roguelike1StageEncounterLeave",
+            "Roguelike1StageEncounterUnknown",
+            "Roguelike1StageEncounterClickToLeave"
+        ]
+    },
+    "Roguelike1StageEncounterFree": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            1100,
+            0,
+            180,
+            700
+        ],
+        "preDelay": 500,
+        "templThreshold": 0.99,
+        "next": [
+            "Roguelike1StageEncounterLeaveConfirm"
+        ]
+    },
+    "Roguelike1StageEncounterLeave": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            1100,
+            0,
+            180,
+            700
+        ],
+        "preDelay": 500,
+        "templThreshold": 0.99,
+        "next": [
+            "Roguelike1StageEncounterLeaveConfirm"
+        ]
+    },
+    "Roguelike1StageEncounterUnknown": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            950,
+            0,
+            320,
+            700
+        ],
+        "templThreshold": 0.9,
+        "preDelay": 500,
+        "next": [
+            "Roguelike1StageEncounterLeaveConfirm"
+        ]
+    },
+    "Roguelike1StageEncounterLeaveConfirm": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            1069,
+            0,
+            211,
+            700
+        ],
+        "rearDelay": 1000,
+        "next": [
+            "Roguelike1StageEncounterGiveUpRecruit",
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1StageEncounterGiveUpRecruit": {
+        "template": "Roguelike1ChooseOperConfirm.png",
+        "action": "clickSelf",
+        "roi": [
+            1016,
+            602,
+            264,
+            118
+        ],
+        "next": [
+            "Roguelike1StageEncounterGiveUpRecruitConfirm"
+        ]
+    },
+    "Roguelike1StageEncounterGiveUpRecruitConfirm": {
+        "action": "clickSelf",
+        "roi": [
+            613,
+            410,
+            424,
+            171
+        ],
+        "next": [
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1StageEncounterClickToLeave": {
+        "algorithm": "justReturn",
+        "action": "clickRect",
+        "specificRect": [
+            600,
+            600,
+            50,
+            50
+        ],
+        "next": [
+            "Roguelike1StageEncounterFree",
+            "Roguelike1StageEncounterLeave",
+            "Roguelike1StageEncounterUnknown",
+            "Roguelike1StageEncounterClickToLeave"
+        ]
+    },
+    "Roguelike1StageCambatDps": {
+        "Doc": "普通作战",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            53,
+            1280,
+            554
+        ],
+        "next": [
+            "Roguelike1StageCambatDpsEnter",
+            "Roguelike1StageEmergencyDpsEnter",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ],
+        "next_Doc": "普通作战和紧急作战的图比较像，有时候会识别错，这里的next把两个开始的按钮都放进来，提高容错"
+    },
+    "Roguelike1StageCambatDpsEnter": {
+        "action": "clickSelf",
+        "roi": [
+            1036,
+            371,
+            223,
+            223
+        ],
+        "next": [
+            "Roguelike1QuickFormation"
+        ]
+    },
+    "Roguelike1StageEmergencyDps": {
+        "Doc": "紧急作战",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            53,
+            1280,
+            554
+        ],
+        "next": [
+            "Roguelike1StageCambatDpsEnter",
+            "Roguelike1StageEmergencyDpsEnter",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ],
+        "next_Doc": "普通作战和紧急作战的图比较像，有时候会识别错，这里的next把两个开始的按钮都放进来，提高容错"
+    },
+    "Roguelike1StageEmergencyDpsEnter": {
+        "action": "clickSelf",
+        "roi": [
+            1036,
+            371,
+            223,
+            223
+        ],
+        "next": [
+            "Roguelike1QuickFormation"
+        ]
+    },
+    "Roguelike1QuickFormation": {
+        "action": "clickSelf",
+        "roi": [
+            817,
+            0,
+            402,
+            146
+        ],
+        "next": [
+            "Roguelike1FormationConfirm"
+        ]
+    },
+    "Roguelike1FormationOper": {
+        "cache": false,
+        "roi": [
+            363,
+            11,
+            891,
+            668
+        ],
+        "maskRange": [
+            1,
+            255
+        ]
+    },
+    "Roguelike1FormationOperSelected": {
+        "template": "empty.png",
+        "templThreshold": 12000,
+        "templThreshold_Doc": "这个任务中作为符合range的像素点数量阈值",
+        "maskRange": [
+            95,
+            105
+        ]
+    },
+    "Roguelike1FormationConfirm": {
+        "action": "clickSelf",
+        "roi": [
+            1015,
+            601,
+            265,
+            119
+        ],
+        "next": [
+            "Roguelike1StartAction"
+        ]
+    },
+    "Roguelike1StartAction": {
+        "action": "clickSelf",
+        "roi": [
+            905,
+            593,
+            375,
+            127
+        ],
+        "next": [
+            "Roguelike1InBattleFlag",
+            "Roguelike1MissionCompletedFlag",
+            "Roguelike1MissionFailedFlag"
+        ]
+    },
+    "Roguelike1InBattleFlag": {
+        "algorithm": "OcrDetect",
+        "text": [
+            "角色"
+        ],
+        "roi": [
+            900,
+            500,
+            380,
+            150
+        ],
+        "action": "doNothing",
+        "rearDelay": 5000,
+        "next": [
+            "Roguelike1InBattleFlag",
+            "Roguelike1MissionCompletedFlag",
+            "Roguelike1MissionFailedFlag"
+        ]
+    },
+    "Roguelike1MissionCompletedFlag": {
+        "roi": [
+            0,
+            0,
+            148,
+            143
+        ],
+        "next": [
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1ClickToDrops": {
+        "algorithm": "justReturn",
+        "action": "clickRect",
+        "specificRect": [
+            600,
+            600,
+            50,
+            50
+        ],
+        "next": [
+            "Roguelike1DropsFlag",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps",
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1DropsFlag": {
+        "roi": [
+            875,
+            601,
+            152,
+            119
+        ],
+        "next": [
+            "Roguelike1GetDrop1",
+            "Roguelike1GetDrop2",
+            "Roguelike1GetDrop3",
+            "Roguelike1GetDropLeave",
+            "Roguelike1StageTrader",
+            "Roguelike1StageEncounter",
+            "Roguelike1StageCambatDps",
+            "Roguelike1StageEmergencyDps"
+        ]
+    },
+    "Roguelike1GetDrop1": {
+        "Doc": "源石锭，绿色的“拿走”按钮",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            471,
+            1280,
+            157
+        ],
+        "next": [
+            "Roguelike1DropsFlag",
+            "Roguelike1GetDropCompleted"
+        ]
+    },
+    "Roguelike1GetDrop2": {
+        "Doc": "希望，黄色的“拿走”按钮",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            471,
+            1280,
+            157
+        ],
+        "next": [
+            "Roguelike1DropsFlag",
+            "Roguelike1GetDropCompleted",
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1GetDrop3": {
+        "Doc": "未知的剧目，黄色的“翻开”按钮",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            471,
+            1280,
+            157
+        ],
+        "next": [
+            "Roguelike1DropsFlag",
+            "Roguelike1GetDropCompleted",
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1GetDropCompleted": {
+        "action": "clickRect",
+        "specificRect": [
+            600,
+            600,
+            50,
+            50
+        ],
+        "rearDelay": 3000,
+        "next": [
+            "Roguelike1ClickToDrops"
+        ]
+    },
+    "Roguelike1GetDropLeave": {
+        "Doc": "不要了，走了（",
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            218,
+            1280,
+            296
+        ],
+        "next": [
+            "Roguelike1GetDropLeaveConfirm",
+            "Roguelike1Begin"
+        ]
+    },
+    "Roguelike1GetDropLeaveConfirm": {
+        "action": "clickSelf",
+        "cache": false,
+        "roi": [
+            0,
+            484,
+            1280,
+            138
+        ],
+        "next": [
+            "Roguelike1Begin"
+        ]
+    },
+    "Roguelike1MissionFailedFlag": {
+        "roi": [
+            504,
+            163,
+            480,
+            167
+        ],
+        "next": [
+            "Roguelike1ClickToStartPoint"
+        ]
+    },
+    "Roguelike1ClickToStartPoint": {
+        "algorithm": "justReturn",
+        "action": "clickRect",
+        "specificRect": [
+            600,
+            600,
+            50,
+            50
+        ],
+        "next": [
+            "Roguelike1Start",
+            "Roguelike1ClickToStartPoint"
         ]
     }
 }
