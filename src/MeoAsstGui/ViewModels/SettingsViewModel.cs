@@ -41,10 +41,11 @@ namespace MeoAsstGui
             DisplayName = "设置";
 
             _listTitle.Add("基建设置");
+            _listTitle.Add("肉鸽设置");
             _listTitle.Add("自动公招");
             _listTitle.Add("信用商店");
             _listTitle.Add("企鹅数据");
-            _listTitle.Add("连接设置");
+            _listTitle.Add("调试设置");
             _listTitle.Add("软件更新");
             //_listTitle.Add("其他");
 
@@ -105,6 +106,13 @@ namespace MeoAsstGui
             };
 
             _dormThresholdLabel = "宿舍入驻心情阈值：" + _dormThreshold + "%";
+
+            RoguelikeModeList = new List<CombData>
+            {
+                new CombData { Display = "尽可能往后打", Value = "0" },
+                new CombData { Display = "刷源石锭投资，第一层商店后直接退出", Value = "1" },
+                new CombData { Display = "刷源石锭投资，投资过后退出", Value = "2" }
+            };
         }
 
         private bool _idle = true;
@@ -123,6 +131,7 @@ namespace MeoAsstGui
         public ObservableCollection<DragItemViewModel> InfrastItemViewModels { get; set; }
 
         public List<CombData> UsesOfDronesList { get; set; }
+        public List<CombData> RoguelikeModeList { get; set; }
 
         private int _dormThreshold = Convert.ToInt32(ViewStatusStorage.Get("Infrast.DormThreshold", "30"));
 
@@ -183,17 +192,6 @@ namespace MeoAsstGui
             }
         }
 
-        private InfrastWorkMode _infrastWorkMode = InfrastWorkMode.Aggressive;
-
-        public InfrastWorkMode InfrastWorkMode
-        {
-            get { return _infrastWorkMode; }
-            set
-            {
-                SetAndNotify(ref _infrastWorkMode, value);
-            }
-        }
-
         #region 设置页面列表和滚动视图联动绑定
 
         private enum NotifyType
@@ -206,6 +204,7 @@ namespace MeoAsstGui
         private NotifyType _notifySource = NotifyType.None;
 
         private System.Timers.Timer _resetNotifyTimer;
+
         private void ResetNotifySource()
         {
             if (_resetNotifyTimer != null)
@@ -230,6 +229,7 @@ namespace MeoAsstGui
         public List<double> RectangleVerticalOffsetList { get; set; }
 
         private int _selectedIndex = 0;
+
         public int SelectedIndex
         {
             get { return _selectedIndex; }
@@ -259,6 +259,7 @@ namespace MeoAsstGui
         }
 
         private double _scrollOffset = 0;
+
         public double ScrollOffset
         {
             get { return _scrollOffset; }
@@ -305,9 +306,23 @@ namespace MeoAsstGui
 
         #endregion 设置页面列表和滚动视图联动绑定
 
+        /* 肉鸽设置 */
+
+        private string _roguelikeMode = ViewStatusStorage.Get("Roguelike.Mode", "0");
+
+        public string RoguelikeMode
+        {
+            get { return _roguelikeMode; }
+            set
+            {
+                SetAndNotify(ref _roguelikeMode, value);
+                ViewStatusStorage.Set("Roguelike.Mode", value);
+            }
+        }
+
         /* 信用商店设置 */
 
-        private bool _creditShopping = System.Convert.ToBoolean(ViewStatusStorage.Get("Mall.CreditShopping", bool.TrueString));
+        private bool _creditShopping = Convert.ToBoolean(ViewStatusStorage.Get("Mall.CreditShopping", bool.TrueString));
 
         public bool CreditShopping
         {
@@ -346,7 +361,7 @@ namespace MeoAsstGui
             }
         }
 
-        private bool _refreshLevel3 = System.Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.RefreshLevel3", bool.TrueString));
+        private bool _refreshLevel3 = Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.RefreshLevel3", bool.TrueString));
 
         public bool RefreshLevel3
         {
@@ -366,7 +381,7 @@ namespace MeoAsstGui
             set { SetAndNotify(ref _useExpedited, value); }
         }
 
-        private bool _chooseLevel3 = System.Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel3", bool.TrueString));
+        private bool _chooseLevel3 = Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel3", bool.TrueString));
 
         public bool ChooseLevel3
         {
@@ -378,7 +393,7 @@ namespace MeoAsstGui
             }
         }
 
-        private bool _chooseLevel4 = System.Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel4", bool.TrueString));
+        private bool _chooseLevel4 = Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel4", bool.TrueString));
 
         public bool ChooseLevel4
         {
@@ -390,7 +405,7 @@ namespace MeoAsstGui
             }
         }
 
-        private bool _chooseLevel5 = System.Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel5", bool.FalseString));
+        private bool _chooseLevel5 = Convert.ToBoolean(ViewStatusStorage.Get("AutoRecruit.ChooseLevel5", bool.FalseString));
 
         public bool ChooseLevel5
         {
@@ -403,7 +418,7 @@ namespace MeoAsstGui
         }
 
         /* 软件更新设置 */
-        private bool _updateBeta = System.Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UpdateBeta", bool.FalseString));
+        private bool _updateBeta = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UpdateBeta", bool.FalseString));
 
         public bool UpdateBeta
         {
@@ -427,7 +442,29 @@ namespace MeoAsstGui
             }
         }
 
-        /* 连接设置 */
+        private bool _useAria2 = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UseAria2", bool.TrueString));
+        public bool UseAria2
+        {
+            get { return _useAria2; }
+            set
+            {
+                SetAndNotify(ref _useAria2, value);
+                ViewStatusStorage.Set("VersionUpdate.UseAria2", value.ToString());
+            }
+        }
+
+        private bool _autoDownloadUpdatePackage = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.AutoDownloadUpdatePackage", bool.TrueString));
+        public bool AutoDownloadUpdatePackage
+        {
+            get { return _autoDownloadUpdatePackage; }
+            set
+            {
+                SetAndNotify(ref _autoDownloadUpdatePackage, value);
+                ViewStatusStorage.Set("VersionUpdate.AutoDownloadUpdatePackage", value.ToString());
+            }
+        }
+
+        /* 调试设置 */
 
         private string _connectAddress = ViewStatusStorage.Get("Connect.Address", string.Empty);
 
@@ -455,7 +492,7 @@ namespace MeoAsstGui
 
         public void TryToSetBlueStacksHyperVAddress()
         {
-            if (BluestacksConfPath.Length == 0)
+            if (BluestacksConfPath.Length == 0 || !File.Exists(BluestacksConfPath))
             {
                 return;
             }

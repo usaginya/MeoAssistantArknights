@@ -31,6 +31,15 @@ namespace asst
             return str;
         }
 
+        inline std::string string_replace_all_batch(const std::string& src, const std::vector<std::pair<std::string, std::string>>& replace_pairs)
+        {
+            std::string str = src;
+            for (auto& [old_value, new_value] : replace_pairs) {
+                str = string_replace_all(str, old_value, new_value);
+            }
+            return str;
+        }
+
         inline std::vector<std::string> string_split(const std::string& str, const std::string& delimiter)
         {
             std::string::size_type pos1 = 0;
@@ -88,10 +97,14 @@ namespace asst
             memset(str, 0, len + 1);
             WideCharToMultiByte(CP_UTF8, 0, wstr, -1, str, len, nullptr, nullptr);
             std::string strTemp = str;
-            if (wstr)
+            if (wstr) {
                 delete[] wstr;
-            if (str)
+                wstr = nullptr;
+            }
+            if (str) {
                 delete[] str;
+                str = nullptr;
+            }
             return strTemp;
 #else   // Don't fucking use gbk in linux!
             return gbk_str;
@@ -104,17 +117,21 @@ namespace asst
             const char* src_str = utf8_str.c_str();
             int len = MultiByteToWideChar(CP_UTF8, 0, src_str, -1, nullptr, 0);
             wchar_t* wszGBK = new wchar_t[len + 1];
-            memset(wszGBK, 0, len * 2 + 2);
+            memset(wszGBK, 0, len * 2LLU + 2LLU);
             MultiByteToWideChar(CP_UTF8, 0, src_str, -1, wszGBK, len);
             len = WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, nullptr, 0, nullptr, nullptr);
             char* szGBK = new char[len + 1];
-            memset(szGBK, 0, len + 1);
+            memset(szGBK, 0, len + 1LLU);
             WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, szGBK, len, nullptr, nullptr);
             std::string strTemp(szGBK);
-            if (wszGBK)
+            if (wszGBK) {
                 delete[] wszGBK;
-            if (szGBK)
+                wszGBK = nullptr;
+            }
+            if (szGBK) {
                 delete[] szGBK;
+                szGBK = nullptr;
+            }
             return strTemp;
 #else   // Don't fucking use gbk in linux!
             return utf8_str;

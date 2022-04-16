@@ -110,7 +110,7 @@ bool asst::MultiMatchImageAnalyzer::multi_match_templ(const cv::Mat templ)
     for (int i = 0; i != matched.rows; ++i) {
         for (int j = 0; j != matched.cols; ++j) {
             auto value = matched.at<float>(i, j);
-            if (value >= m_templ_thres) {
+            if (m_templ_thres <= value && value < 2.0) {
                 Rect rect(j + m_roi.x, i + m_roi.y, templ.cols, templ.rows);
                 bool need_push = true;
                 // 如果有两个点离得太近，只取里面得分高的那个
@@ -131,6 +131,14 @@ bool asst::MultiMatchImageAnalyzer::multi_match_templ(const cv::Mat templ)
             }
         }
     }
+
+#ifdef ASST_DEBUG
+    for (const auto& rect : m_result) {
+        cv::rectangle(m_image_draw, utils::make_rect<cv::Rect>(rect.rect), cv::Scalar(0, 0, 255), 2);
+        cv::putText(m_image_draw, std::to_string(rect.score), cv::Point(rect.rect.x, rect.rect.y), 1, 1, cv::Scalar(0, 0, 255));
+    }
+#endif
+
     std::string log_str = "[ ";
     for (const auto& res : m_result) {
         log_str += res.rect.to_string() + " : " + std::to_string(res.score) + "; ";

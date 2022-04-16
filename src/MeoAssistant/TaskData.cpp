@@ -4,9 +4,10 @@
 
 #include <meojson/json.hpp>
 
-#include "AsstDef.h"
+#include "AsstTypes.h"
 #include "GeneralConfiger.h"
 #include "TemplResource.h"
+#include "Logger.hpp"
 
 const std::shared_ptr<asst::TaskInfo> asst::TaskData::get(const std::string& name) const noexcept
 {
@@ -24,27 +25,22 @@ const std::unordered_set<std::string>& asst::TaskData::get_templ_required() cons
     return m_templ_required;
 }
 
-std::shared_ptr<asst::TaskInfo> asst::TaskData::get(std::string name)
+std::shared_ptr<asst::TaskInfo> asst::TaskData::get(const std::string& name)
 {
-    return m_all_tasks_info[std::move(name)];
-}
-
-void asst::TaskData::clear_cache() noexcept
-{
-    for (auto&& [name, ptr] : m_all_tasks_info) {
-        ptr->region_of_appeared = Rect();
-    }
+    return m_all_tasks_info[name];
 }
 
 bool asst::TaskData::parse(const json::value& json)
 {
+    LogTraceFunction;
+
     auto to_lower = [](char c) -> char {
         return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
     };
     for (const auto& [name, task_json] : json.as_object()) {
         std::string algorithm_str = task_json.get("algorithm", "matchtemplate");
         std::transform(algorithm_str.begin(), algorithm_str.end(), algorithm_str.begin(), to_lower);
-        AlgorithmType algorithm = AlgorithmType::Invaild;
+        AlgorithmType algorithm = AlgorithmType::Invalid;
         if (algorithm_str == "matchtemplate") {
             algorithm = AlgorithmType::MatchTemplate;
         }
@@ -76,7 +72,7 @@ bool asst::TaskData::parse(const json::value& json)
                 "templThreshold", TemplThresholdDefault);
             match_task_info_ptr->special_threshold = task_json.get(
                 "specialThreshold", 0);
-            if (task_json.exist("maskRange")) {
+            if (task_json.contains("maskRange")) {
                 match_task_info_ptr->mask_range = std::make_pair(
                     task_json.at("maskRange")[0].as_integer(),
                     task_json.at("maskRange")[1].as_integer());
@@ -89,8 +85,8 @@ bool asst::TaskData::parse(const json::value& json)
             for (const json::value& text : task_json.at("text").as_array()) {
                 ocr_task_info_ptr->text.emplace_back(text.as_string());
             }
-            ocr_task_info_ptr->need_full_match = task_json.get("need_match", false);
-            if (task_json.exist("ocrReplace")) {
+            ocr_task_info_ptr->full_match = task_json.get("fullMatch", false);
+            if (task_json.contains("ocrReplace")) {
                 for (const json::value& rep : task_json.at("ocrReplace").as_array()) {
                     ocr_task_info_ptr->replace_map.emplace(rep.as_array()[0].as_string(), rep.as_array()[1].as_string());
                 }
@@ -104,7 +100,7 @@ bool asst::TaskData::parse(const json::value& json)
                 hash_task_info_ptr->hashs.emplace_back(hash.as_string());
             }
             hash_task_info_ptr->dist_threshold = task_json.get("threshold", 0);
-            if (task_json.exist("maskRange")) {
+            if (task_json.contains("maskRange")) {
                 hash_task_info_ptr->mask_range = std::make_pair(
                     task_json.at("maskRange")[0].as_integer(),
                     task_json.at("maskRange")[1].as_integer());
@@ -117,7 +113,7 @@ bool asst::TaskData::parse(const json::value& json)
         task_info_ptr->cache = task_json.get("cache", true);
         task_info_ptr->algorithm = algorithm;
         task_info_ptr->name = name;
-        std::string action = task_json.get("action", std::string());
+        std::string action = task_json.get("action", "donothing");
         std::transform(action.begin(), action.end(), action.begin(), to_lower);
         if (action == "clickself") {
             task_info_ptr->action = ProcessTaskAction::ClickSelf;
@@ -152,7 +148,7 @@ bool asst::TaskData::parse(const json::value& json)
         }
 
         task_info_ptr->max_times = task_json.get("maxTimes", INT_MAX);
-        if (task_json.exist("exceededNext")) {
+        if (task_json.contains("exceededNext")) {
             const json::array& excceed_next_arr = task_json.at("exceededNext").as_array();
             for (const json::value& excceed_next : excceed_next_arr) {
                 task_info_ptr->exceeded_next.emplace_back(excceed_next.as_string());
@@ -163,13 +159,13 @@ bool asst::TaskData::parse(const json::value& json)
         }
         task_info_ptr->pre_delay = task_json.get("preDelay", 0);
         task_info_ptr->rear_delay = task_json.get("rearDelay", 0);
-        if (task_json.exist("reduceOtherTimes")) {
+        if (task_json.contains("reduceOtherTimes")) {
             const json::array& reduce_arr = task_json.at("reduceOtherTimes").as_array();
             for (const json::value& reduce : reduce_arr) {
                 task_info_ptr->reduce_other_times.emplace_back(reduce.as_string());
             }
         }
-        if (task_json.exist("roi")) {
+        if (task_json.contains("roi")) {
             const json::array& area_arr = task_json.at("roi").as_array();
             int x = area_arr[0].as_integer();
             int y = area_arr[1].as_integer();
@@ -187,12 +183,12 @@ bool asst::TaskData::parse(const json::value& json)
             task_info_ptr->roi = Rect();
         }
 
-        if (task_json.exist("next")) {
+        if (task_json.contains("next")) {
             for (const json::value& next : task_json.at("next").as_array()) {
                 task_info_ptr->next.emplace_back(next.as_string());
             }
         }
-        if (task_json.exist("rectMove")) {
+        if (task_json.contains("rectMove")) {
             const json::array& move_arr = task_json.at("rectMove").as_array();
             task_info_ptr->rect_move = Rect(
                 move_arr[0].as_integer(),
@@ -204,7 +200,7 @@ bool asst::TaskData::parse(const json::value& json)
             task_info_ptr->rect_move = Rect();
         }
 
-        m_all_tasks_info.emplace(name, task_info_ptr);
+        m_all_tasks_info[name] = task_info_ptr;
     }
 #ifdef ASST_DEBUG
     for (const auto& [name, task] : m_all_tasks_info) {

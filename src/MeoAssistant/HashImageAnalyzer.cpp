@@ -32,13 +32,13 @@ bool asst::HashImageAnalyzer::analyze()
             to_hash = bound_bin(to_hash);
         }
         std::string hash_result = shash(to_hash);
-        Log.trace(hash_result);
+        //Log.debug(hash_result);
 
         int min_dist = INT_MAX;
         std::string cur_min_dist_name;
         for (auto&& [name, templ] : m_hash_templates) {
             int hm = hamming(hash_result, templ);
-            Log.trace(name, "dist:", hm);
+            //Log.debug(name, "dist:", hm);
             if (hm < min_dist) {
                 cur_min_dist_name = name;
                 min_dist = hm;
@@ -163,7 +163,7 @@ int asst::HashImageAnalyzer::hamming(std::string hash1, std::string hash2)
         unsigned long long x = strtoull(hash1.substr(i, 16).c_str(), nullptr, 16)
             ^ strtoull(hash2.substr(i, 16).c_str(), nullptr, 16);
         while (x) {
-            dist++;
+            ++dist;
             x = x & (x - 1);
         }
     }

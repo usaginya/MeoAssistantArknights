@@ -49,6 +49,8 @@ namespace MeoAsstGui
 
         [DllImport("MeoAssistant.dll")] private static extern bool AsstAppendRecruit(IntPtr ptr, int max_times, int[] select_level, int required_len, int[] confirm_level, int confirm_len, bool need_refresh, bool use_expedited);
 
+        [DllImport("MeoAssistant.dll")] private static extern bool AsstAppendRoguelike(IntPtr ptr, int mode);
+
         [DllImport("MeoAssistant.dll")] private static extern bool AsstStartRecruitCalc(IntPtr ptr, int[] select_level, int required_len, bool set_time);
 
         [DllImport("MeoAssistant.dll")] private static extern bool AsstStart(IntPtr ptr);
@@ -185,6 +187,7 @@ namespace MeoAsstGui
                 case AsstMsg.AllTasksCompleted:
                     mainModel.Idle = true;
                     mainModel.AddLog("任务已全部完成");
+                    mainModel.UseStone = false;
                     using (var toast = new ToastNotification("任务已全部完成！"))
                     {
                         toast.Show();
@@ -240,6 +243,10 @@ namespace MeoAsstGui
                 case "ReportToPenguinStats":
                     mainModel.AddLog("上传企鹅数据错误", "darkred");
                     break;
+
+                case "CheckStageValid":
+                    mainModel.AddLog("EX 关卡，已停止", "darkred");
+                    break;
             }
         }
 
@@ -277,6 +284,63 @@ namespace MeoAsstGui
 
                     case "InfrastDormDoubleConfirmButton":
                         mainModel.AddLog("干员冲突", "darkred");
+                        break;
+
+                    /* 肉鸽相关 */
+                    case "Roguelike1Start":
+                        mainModel.AddLog("已开始探索 " + execTimes + " 次", "darkcyan");
+                        break;
+
+                    case "Roguelike1StageTraderInvestConfirm":
+                        mainModel.AddLog("已投资 " + execTimes + " 个源石锭", "darkcyan");
+                        break;
+
+                    case "Roguelike1ExitThenAbandon":
+                        mainModel.AddLog("已放弃本次探索");
+                        break;
+
+                    //case "Roguelike1StartAction":
+                    //    mainModel.AddLog("开始战斗");
+                    //    break;
+
+                    case "Roguelike1MissionCompletedFlag":
+                        mainModel.AddLog("战斗完成");
+                        break;
+
+                    case "Roguelike1MissionFailedFlag":
+                        mainModel.AddLog("战斗失败");
+                        break;
+
+                    case "Roguelike1StageTraderEnter":
+                        mainModel.AddLog("关卡：诡异行商");
+                        break;
+
+                    case "Roguelike1StageSafeHouseEnter":
+                        mainModel.AddLog("关卡：安全的角落");
+                        break;
+
+                    case "Roguelike1StageEncounterEnter":
+                        mainModel.AddLog("关卡：不期而遇/古堡馈赠");
+                        break;
+
+                    //case "Roguelike1StageBoonsEnter":
+                    //    mainModel.AddLog("古堡馈赠");
+                    //    break;
+
+                    case "Roguelike1StageCambatDpsEnter":
+                        mainModel.AddLog("关卡：普通作战");
+                        break;
+
+                    case "Roguelike1StageEmergencyDps":
+                        mainModel.AddLog("关卡：紧急作战");
+                        break;
+
+                    case "Roguelike1StageDreadfulFoe":
+                        mainModel.AddLog("关卡：险路恶敌");
+                        break;
+
+                    case "Roguelike1StageTraderInvestSystemFull":
+                        mainModel.AddLog("投资达到上限", "darkcyan");
                         break;
                 }
             }
@@ -391,6 +455,31 @@ namespace MeoAsstGui
                 case "NotEnoughStaff":
                     {
                         mainModel.AddLog("可用干员不足", "darkred");
+                    }
+                    break;
+
+                /* Roguelike */
+                case "StageInfo":
+                    {
+                        mainModel.AddLog("开始战斗：" + subTaskDetails["name"]);
+                    }
+                    break;
+
+                case "StageInfoError":
+                    {
+                        mainModel.AddLog("关卡识别错误", "darkred");
+                    }
+                    break;
+
+                case "PenguinId":
+                    {
+                        var settings = _container.Get<SettingsViewModel>();
+                        if (settings.PenguinId == String.Empty)
+                        {
+                            string id = subTaskDetails["id"].ToString();
+                            settings.PenguinId = id;
+                            AsstSetPenguinId(id);
+                        }
                     }
                     break;
             }
@@ -510,6 +599,11 @@ namespace MeoAsstGui
             return AsstAppendInfrast(_ptr, work_mode, order, order_len, uses_of_drones, dorm_threshold);
         }
 
+        public bool AsstAppendRoguelike(int mode)
+        {
+            return AsstAppendRoguelike(_ptr, mode);
+        }
+
         public bool AsstStart()
         {
             return AsstStart(_ptr);
@@ -553,13 +647,5 @@ namespace MeoAsstGui
         SubTaskStart,               // 原子任务开始
         SubTaskCompleted,           // 原子任务完成
         SubTaskExtraInfo            // 原子任务额外信息
-    };
-
-    public enum InfrastWorkMode
-    {
-        Invaild = -1,
-        Gentle,         // 温和换班模式：会对干员人数不满的设施进行换班，计算单设施内最优解，尽量不破坏原有的干员组合；即若设施内干员是满的，则不对该设施进行换班
-        Aggressive,     // 激进换班模式：会对每一个设施进行换班，计算单设施内最优解，但不会将其他设施中的干员替换过来；即按工作状态排序，仅选择前面的干员
-        Extreme         // 偏激换班模式：会对每一个设施进行换班，计算全局的单设施内最优解，为追求更高效率，会将其他设施内的干员也替换过来；即按技能排序，计算所有拥有该设施技能的干员效率，无论他在不在其他地方工作
     };
 }
