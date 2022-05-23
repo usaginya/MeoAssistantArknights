@@ -236,7 +236,7 @@ namespace json
         template <typename... Args> decltype(auto) emplace_back(Args &&...args);
 
         void clear() noexcept;
-        // void earse(size_t pos);
+        // void erase(size_t pos);
 
         iterator begin() noexcept;
         iterator end() noexcept;
@@ -325,7 +325,7 @@ namespace json
         template <typename... Args> decltype(auto) insert(Args &&...args);
 
         void clear() noexcept;
-        bool earse(const std::string& key);
+        bool erase(const std::string& key);
 
         iterator begin() noexcept;
         iterator end() noexcept;
@@ -1022,10 +1022,9 @@ namespace json
         static_assert(
             std::is_constructible<json::value, typename ArrayType::value_type>::value,
             "Parameter can't be used to construct a json::value");
-        _array_data.reserve(arr.size());
-        for (auto&& ele : arr) {
-            _array_data.emplace_back(std::move(ele));
-        }
+        _array_data.assign(
+            std::make_move_iterator(arr.begin()),
+            std::make_move_iterator(arr.end()));
     }
 
     MEOJSON_INLINE const value& array::at(size_t pos) const
@@ -1433,7 +1432,7 @@ namespace json
 
     MEOJSON_INLINE void object::clear() noexcept { _object_data.clear(); }
 
-    MEOJSON_INLINE bool object::earse(const std::string& key)
+    MEOJSON_INLINE bool object::erase(const std::string& key)
     {
         return _object_data.erase(key) > 0 ? true : false;
     }
@@ -1835,10 +1834,9 @@ namespace json
                                             typename MapType::value_type>::value,
                       "Parameter can't be used to construct a "
                       "object::raw_object::value_type");
-        _object_data.reserve(map.size());
-        for (auto&& ele : map) {
-            _object_data.emplace(std::move(ele));
-        }
+        _object_data.insert(
+            std::make_move_iterator(map.begin()),
+            std::make_move_iterator(map.end()));
     }
 
     // *************************
@@ -1855,8 +1853,7 @@ namespace json
         parser(const std::string::const_iterator& cbegin,
                const std::string::const_iterator& cend) noexcept
             : _cur(cbegin), _end(cend)
-        {
-        }
+        {}
 
         std::optional<value> parse();
         value parse_value();

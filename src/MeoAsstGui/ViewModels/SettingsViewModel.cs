@@ -12,9 +12,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Notification.Wpf.Constants;
+using Notification.Wpf.Controls;
 using Stylet;
 using StyletIoC;
 
@@ -45,11 +48,13 @@ namespace MeoAsstGui
             _listTitle.Add("自动公招");
             _listTitle.Add("信用商店");
             _listTitle.Add("企鹅数据");
-            _listTitle.Add("调试设置");
+            _listTitle.Add("连接设置");
+            _listTitle.Add("通知显示");
             _listTitle.Add("软件更新");
             //_listTitle.Add("其他");
 
             InfrastInit();
+            ToastPositionInit();
         }
 
         private List<string> _listTitle = new List<string>();
@@ -105,6 +110,17 @@ namespace MeoAsstGui
                 new CombData { Display = "制造站-芯片组", Value = "Chip" }
             };
 
+            ConnectConfigList = new List<CombData>
+            {
+                new CombData { Display = "通用", Value = "General" },
+                new CombData { Display = "蓝叠模拟器", Value = "BlueStacks" },
+                new CombData { Display = "MuMu模拟器", Value = "MuMuEmulator" },
+                new CombData { Display = "雷电模拟器", Value = "LDPlayer" },
+                new CombData { Display = "夜神模拟器", Value = "Nox" },
+                new CombData { Display = "逍遥模拟器", Value = "XYAZ" },
+                new CombData { Display = "WSA", Value = "WSA" }
+            };
+
             _dormThresholdLabel = "宿舍入驻心情阈值：" + _dormThreshold + "%";
 
             RoguelikeModeList = new List<CombData>
@@ -113,6 +129,10 @@ namespace MeoAsstGui
                 new CombData { Display = "刷源石锭投资，第一层商店后直接退出", Value = "1" },
                 new CombData { Display = "刷源石锭投资，投资过后退出", Value = "2" }
             };
+
+            ConnectAddressList = new ObservableCollection<string>();
+
+            UpdateAddressByConfig();
         }
 
         private bool _idle = true;
@@ -132,6 +152,8 @@ namespace MeoAsstGui
 
         public List<CombData> UsesOfDronesList { get; set; }
         public List<CombData> RoguelikeModeList { get; set; }
+        public List<CombData> ConnectConfigList { get; set; }
+        public ObservableCollection<string> ConnectAddressList { get; set; }
 
         private int _dormThreshold = Convert.ToInt32(ViewStatusStorage.Get("Infrast.DormThreshold", "30"));
 
@@ -334,6 +356,30 @@ namespace MeoAsstGui
             }
         }
 
+        private string _creditFirstList = ViewStatusStorage.Get("Mall.CreditFirstList", "招聘许可 龙门币");
+
+        public string CreditFirstList
+        {
+            get { return _creditFirstList; }
+            set
+            {
+                SetAndNotify(ref _creditFirstList, value);
+                ViewStatusStorage.Set("Mall.CreditFirstList", value);
+            }
+        }
+
+        private string _creditBlackList = ViewStatusStorage.Get("Mall.CreditBlackList", "碳 家具");
+
+        public string CreditBlackList
+        {
+            get { return _creditBlackList; }
+            set
+            {
+                SetAndNotify(ref _creditBlackList, value);
+                ViewStatusStorage.Set("Mall.CreditBlackList", value);
+            }
+        }
+
         /* 企鹅数据设置 */
 
         private string _penguinId = ViewStatusStorage.Get("Penguin.Id", string.Empty);
@@ -417,6 +463,284 @@ namespace MeoAsstGui
             }
         }
 
+        /* 通知显示设置 */
+
+        #region 通知显示
+
+        // 左上
+        private bool _toastPositionTopLeft = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.TopLeft.ToString();
+
+        public bool ToastPositionTopLeft
+        {
+            get { return _toastPositionTopLeft; }
+            set
+            {
+                SetAndNotify(ref _toastPositionTopLeft, value);
+
+                if (value)
+                {
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.TopLeft;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.TopLeft.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 上
+        private bool _toastPositionTopCenter = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.TopCenter.ToString();
+
+        public bool ToastPositionTopCenter
+        {
+            get { return _toastPositionTopCenter; }
+            set
+            {
+                SetAndNotify(ref _toastPositionTopCenter, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.TopCenter;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.TopCenter.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 右上
+        private bool _toastPositionTopRight = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.TopRight.ToString();
+
+        public bool ToastPositionTopRight
+        {
+            get { return _toastPositionTopRight; }
+            set
+            {
+                SetAndNotify(ref _toastPositionTopRight, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.TopRight;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.TopRight.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 左
+        private bool _toastPositionCenterLeft = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.CenterLeft.ToString();
+
+        public bool ToastPositionCenterLeft
+        {
+            get { return _toastPositionCenterLeft; }
+            set
+            {
+                SetAndNotify(ref _toastPositionCenterLeft, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.CenterLeft;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.CenterLeft.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 右
+        private bool _toastPositionCenterRight = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.CenterRight.ToString();
+
+        public bool ToastPositionCenterRight
+        {
+            get { return _toastPositionCenterRight; }
+            set
+            {
+                SetAndNotify(ref _toastPositionCenterRight, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.CenterRight;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.CenterRight.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 左下
+        private bool _toastPositionBottomLeft = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.BottomLeft.ToString();
+
+        public bool ToastPositionBottomLeft
+        {
+            get { return _toastPositionBottomLeft; }
+            set
+            {
+                SetAndNotify(ref _toastPositionBottomLeft, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomCenter =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.BottomLeft;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.BottomLeft.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 下
+        private bool _toastPositionBottomCenter = ViewStatusStorage.Get("Toast.Position", string.Empty) == NotificationPosition.BottomCenter.ToString();
+
+        public bool ToastPositionBottomCenter
+        {
+            get { return _toastPositionBottomCenter; }
+            set
+            {
+                SetAndNotify(ref _toastPositionBottomCenter, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomRight = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.BottomCenter;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.BottomCenter.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 右下
+        private bool _toastPositionBottomRight =
+            ViewStatusStorage.Get("Toast.Position", NotificationPosition.BottomRight.ToString()) == NotificationPosition.BottomRight.ToString();
+
+        public bool ToastPositionBottomRight
+        {
+            get { return _toastPositionBottomRight; }
+            set
+            {
+                SetAndNotify(ref _toastPositionBottomRight, value);
+
+                if (value)
+                {
+                    ToastPositionTopLeft =
+                    ToastPositionTopCenter =
+                    ToastPositionTopRight =
+                    ToastPositionCenterLeft =
+                    ToastPositionCenterRight =
+                    ToastPositionBottomLeft =
+                    ToastPositionBottomCenter = false;
+                    NotificationConstants.MessagePosition = NotificationPosition.BottomRight;
+                    ViewStatusStorage.Set("Toast.Position", NotificationPosition.BottomRight.ToString());
+                }
+                else
+                {
+                    ToastPositionOnlySound();
+                }
+            }
+        }
+
+        // 设置通知只有通知声音
+        private void ToastPositionOnlySound()
+        {
+            if (!ToastPositionTopLeft
+                && !ToastPositionTopCenter
+                && !ToastPositionTopRight
+                && !ToastPositionCenterLeft
+                && !ToastPositionCenterRight
+                && !ToastPositionBottomLeft
+                && !ToastPositionBottomCenter
+                && !ToastPositionBottomRight)
+            {
+                ViewStatusStorage.Set("Toast.Position", string.Empty);
+            }
+        }
+
+        // 通知测试
+        public void ToastPositionTest()
+        {
+            Execute.OnUIThread(() =>
+            {
+                using (var toast = new ToastNotification("通知显示位置测试"))
+                {
+                    toast.AppendContentText("如果选择了新的位置")
+                        .AppendContentText("请先点掉这个通知再测试").Show(lifeTime: 5, row: 2);
+                }
+            });
+        }
+
+        // 通知位置初始化
+        private void ToastPositionInit()
+        {
+            var position = ViewStatusStorage.Get("Toast.Position", NotificationPosition.BottomRight.ToString());
+            if (string.IsNullOrWhiteSpace(position))
+                return;
+
+            NotificationConstants.MessagePosition = (NotificationPosition)Enum.Parse(typeof(NotificationPosition), position);
+        }
+
+        #endregion 通知显示
+
         /* 软件更新设置 */
         private bool _updateBeta = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UpdateBeta", bool.FalseString));
 
@@ -427,6 +751,18 @@ namespace MeoAsstGui
             {
                 SetAndNotify(ref _updateBeta, value);
                 ViewStatusStorage.Set("VersionUpdate.UpdateBeta", value.ToString());
+            }
+        }
+
+        private bool _updateCheck = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UpdateCheck", bool.TrueString));
+
+        public bool UpdateCheck
+        {
+            get { return _updateCheck; }
+            set
+            {
+                SetAndNotify(ref _updateCheck, value);
+                ViewStatusStorage.Set("VersionUpdate.UpdateCheck", value.ToString());
             }
         }
 
@@ -443,6 +779,7 @@ namespace MeoAsstGui
         }
 
         private bool _useAria2 = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.UseAria2", bool.TrueString));
+
         public bool UseAria2
         {
             get { return _useAria2; }
@@ -454,6 +791,7 @@ namespace MeoAsstGui
         }
 
         private bool _autoDownloadUpdatePackage = Convert.ToBoolean(ViewStatusStorage.Get("VersionUpdate.AutoDownloadUpdatePackage", bool.TrueString));
+
         public bool AutoDownloadUpdatePackage
         {
             get { return _autoDownloadUpdatePackage; }
@@ -478,33 +816,116 @@ namespace MeoAsstGui
             }
         }
 
-        private string _bluestacksConfPath = ViewStatusStorage.Get("Connect.BluestacksConfPath", string.Empty);
+        private string _adbPath = ViewStatusStorage.Get("Connect.AdbPath", string.Empty);
 
-        public string BluestacksConfPath
+        public string AdbPath
         {
-            get { return _bluestacksConfPath; }
+            get { return _adbPath; }
             set
             {
-                SetAndNotify(ref _bluestacksConfPath, value);
-                ViewStatusStorage.Set("Connect.BluestacksConfPath", value);
+                SetAndNotify(ref _adbPath, value);
+                ViewStatusStorage.Set("Connect.AdbPath", value);
             }
         }
 
-        public void TryToSetBlueStacksHyperVAddress()
+        public void QueryAdbDevices()
         {
-            if (BluestacksConfPath.Length == 0 || !File.Exists(BluestacksConfPath))
+            ConnectAddressList.Clear();
+            var adbProcess = new Process
             {
-                return;
-            }
-            var all_lines = File.ReadAllLines(BluestacksConfPath);
-            foreach (var line in all_lines)
-            {
-                if (line.StartsWith("bst.instance.Nougat64.status.adb_port"))
+                StartInfo = new ProcessStartInfo
                 {
-                    var sp = line.Split('"');
-                    ConnectAddress = "127.0.0.1:" + sp[1];
+                    FileName = AdbPath,
+                    Arguments = "devices",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                },
+                EnableRaisingEvents = true
+            };
+
+            adbProcess.Start();
+            adbProcess.WaitForExit();
+            string output = adbProcess.StandardOutput.ReadToEnd();
+            adbProcess.Close();
+            var addressList = new List<string>(output.Split('\n'));
+            addressList.RemoveAt(0);
+            foreach (var address in addressList)
+            {
+                if (string.IsNullOrWhiteSpace(address))
+                    continue;
+
+                var device = address.Split('\t')[0];
+                ConnectAddressList.Add(device);
+            }
+        }
+
+        private string _connectConfig = ViewStatusStorage.Get("Connect.ConnectConfig", "General");
+
+        public string ConnectConfig
+        {
+            get { return _connectConfig; }
+            set
+            {
+                SetAndNotify(ref _connectConfig, value);
+                ViewStatusStorage.Set("Connect.ConnectConfig", value);
+                if (ConnectAddress.Length == 0)
+                {
+                    UpdateAddressByConfig();
                 }
             }
         }
+
+        private readonly Dictionary<string, List<string>> ConfigAddressesMapping = new Dictionary<string, List<string>>
+            {
+                { "General", new List<string> {""} },
+                { "BlueStacks", new List<string> {"127.0.0.1:5555", "127.0.0.1:5556", "127.0.0.1:5557" } },
+                { "MuMuEmulator", new List<string>{"127.0.0.1:7555"} },
+                { "LDPlayer", new List<string>{ "127.0.0.1:5555", "emulator-5554" } },
+                { "Nox", new List<string> { "127.0.0.1:62001", "127.0.0.1:59865" } },
+                { "XYAZ", new List<string> {"127.0.0.1:21503" }  },
+                { "WSA", new List<string> { "127.0.0.1:58526" } },
+            };
+
+        public void UpdateAddressByConfig()
+        {
+            var addresses = ConfigAddressesMapping[ConnectConfig];
+            ConnectAddress = addresses.FirstOrDefault();
+            //ConnectAddressList.Clear();
+            //foreach (var address in addresses)
+            //{
+            //    ConnectAddressList.Add(address);
+            //}
+        }
+
+        public void SelectFile()
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog();
+
+            dialog.Filter = "adb程序|*.exe";
+
+            if (dialog.ShowDialog() == true)
+            {
+                AdbPath = dialog.FileName;
+            }
+        }
+
+        //public void TryToSetBlueStacksHyperVAddress()
+        //{
+        //    if (AdbPath.Length == 0 || !File.Exists(AdbPath))
+        //    {
+        //        return;
+        //    }
+        //    var all_lines = File.ReadAllLines(AdbPath);
+        //    foreach (var line in all_lines)
+        //    {
+        //        if (line.StartsWith("bst.instance.Nougat64.status.adb_port"))
+        //        {
+        //            var sp = line.Split('"');
+        //            ConnectAddress = "127.0.0.1:" + sp[1];
+        //        }
+        //    }
+        //}
     }
 }

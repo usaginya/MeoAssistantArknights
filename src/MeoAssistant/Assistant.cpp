@@ -77,7 +77,7 @@ asst::Assistant::TaskId asst::Assistant::append_task(const std::string& type, co
 {
     Log.info(__FUNCTION__, type, params);
 
-    auto ret = json::parse(params);
+    auto ret = json::parse(params.empty() ? "{}" : params);
     if (!ret) {
         return 0;
     }
@@ -142,7 +142,7 @@ bool asst::Assistant::set_task_params(TaskId task_id, const std::string& params)
         return false;
     }
 
-    auto ret = json::parse(params);
+    auto ret = json::parse(params.empty() ? "{}" : params);
     if (!ret) {
         return false;
     }
@@ -237,7 +237,11 @@ void Assistant::working_proc()
 
             bool ret = task_ptr->run();
 
-            m_tasks_list.pop_front();
+            lock.lock();
+            if (!m_tasks_list.empty()) {
+                m_tasks_list.pop_front();
+            }
+            lock.unlock();
 
             auto run_msg = AsstMsg::TaskChainCompleted;
             if (!ret) {

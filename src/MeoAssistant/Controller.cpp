@@ -16,7 +16,11 @@
 #include <vector>
 
 #include <opencv2/opencv.hpp>
+
+#pragma warning( push )
+#pragma warning( disable : 4068)
 #include <zlib/decompress.hpp>
+#pragma warning( pop )
 
 #include "AsstTypes.h"
 #include "Logger.hpp"
@@ -265,7 +269,7 @@ std::optional<std::vector<unsigned char>> asst::Controller::call_command(const s
     else {
         // failed to create child process
         return std::nullopt;
-}
+    }
 #endif
 
     Log.trace("Call `", cmd, "` ret", exit_ret, ", output size:", pipe_data.size());
@@ -364,7 +368,7 @@ void asst::Controller::clear_info() noexcept
     m_width = 0;
     m_height = 0;
     m_control_scale = 1.0;
-    m_scale_size = decltype(m_scale_size)();
+    m_scale_size = { WindowWidthDefault, WindowHeightDefault };
 }
 
 int asst::Controller::push_cmd(const std::string& cmd)
@@ -388,6 +392,12 @@ void asst::Controller::wait(unsigned id) const noexcept
 bool asst::Controller::screencap()
 {
     LogTraceFunction;
+
+    //if (true) {
+    //    std::unique_lock<std::shared_mutex> image_lock(m_image_mutex);
+    //    m_cache_image = cv::imread("err/1.png");
+    //    return true;
+    //}
 
     DecodeFunc decode_raw_with_gzip = [&](const std::vector<uchar>& data) -> bool {
         auto unzip_data = gzip::decompress(data.data(), data.size());
@@ -508,7 +518,7 @@ cv::Mat asst::Controller::get_resized_image() const
         return cv::Mat(dsize, CV_8UC3);
     }
     cv::Mat resized_mat;
-    cv::resize(m_cache_image, resized_mat, dsize);
+    cv::resize(m_cache_image, resized_mat, dsize, 0.0, 0.0, cv::INTER_AREA);
     return resized_mat;
 }
 
@@ -625,6 +635,12 @@ bool asst::Controller::connect(const std::string& adb_path, const std::string& a
     LogTraceFunction;
 
     clear_info();
+
+#ifdef ASST_DEBUG
+    if (config == "DEBUG") {
+        return true;
+    }
+#endif
 
     auto get_info_json = [&]() -> json::value {
         return json::object{
@@ -819,26 +835,33 @@ bool asst::Controller::connect(const std::string& adb_path, const std::string& a
 bool asst::Controller::disconnect()
 {
 #ifndef _WIN32
-    if (m_child) {
+    if (m_child)
 #else
-    if (true) {
+    if (true)
 #endif
+    {
         return call_command(m_adb.release).has_value();
     }
-    }
+}
 
 const std::string& asst::Controller::get_uuid() const
 {
     return m_uuid;
 }
 
-cv::Mat asst::Controller::get_image()
+cv::Mat asst::Controller::get_image(bool raw)
 {
     // 有些模拟器adb偶尔会莫名其妙截图失败，多试几次
     for (int i = 0; i != 20; ++i) {
         if (screencap()) {
             break;
         }
+    }
+
+    if (raw) {
+        std::shared_lock<std::shared_mutex> image_lock(m_image_mutex);
+        cv::Mat copy = m_cache_image.clone();
+        return copy;
     }
 
     return get_resized_image();

@@ -55,7 +55,7 @@ MAA 的意思是 MAA Assistant Arknights
 3. 第一次运行软件，**请使用管理员权限** 打开 `MeoAsstGui.exe`。运行过一次后，后续不再需要管理员权限。
 4. 开始运行后，除 `自动关机` 外，所有设置均不可再修改。
 
-目前仅对 `16:9` 分辨率支持较好，其他分辨率勉强可用，但可能会有奇奇怪怪的问题，正在进一步适配中_(:з」∠)_
+目前仅对 `16:9` 分辨率支持较好，最低支持 `1280 * 720`，更高不限。非 `16:9` 分辨率可能会有奇奇怪怪的问题，正在进一步适配中_(:з」∠)_
 
 更多使用说明请参考 [详细介绍](docs/详细介绍.md)
 
@@ -80,7 +80,7 @@ MAA 的意思是 MAA Assistant Arknights
 - 图像识别库：[opencv](https://github.com/opencv/opencv.git)
 - ~~文字识别库：[chineseocr_lite](https://github.com/DayBreak-u/chineseocr_lite.git)~~
 - 文字识别库：[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)
-- 关卡掉落识别：[企鹅物流识别](https://github.com/KumoSiunaus/penguin-stats-recognize-v3)
+- ~~关卡掉落识别：[企鹅物流识别](https://github.com/penguin-statistics/recognizer)~~
 - 地图格子识别：[Arknights-Tile-Pos](https://github.com/yuanyan3060/Arknights-Tile-Pos)
 - C++ JSON库：[meojson](https://github.com/MistEO/meojson.git)
 - C++ 运算符解析器：[calculator](https://github.com/kimwalisch/calculator)
@@ -97,22 +97,19 @@ MAA 的意思是 MAA Assistant Arknights
 - 公开招募数据：[明日方舟工具箱](https://www.bigfun.cn/tools/aktools/hr)
 - 干员及基建数据：[PRTS明日方舟中文WIKI](http://prts.wiki/)
 - 关卡数据：[企鹅物流数据统计](https://penguin-stats.cn/)
+- 材料数据：[明日方舟bot常用素材](https://github.com/yuanyan3060/Arknights-Bot-Resource)
 
 ### 贡献/参与者
 
-感谢所有参与到开发/测试中的朋友们，是大家的帮助让 MAA 越来越好！  
-这里仅列出对 MAA 提供了巨大帮助的大佬们 (*´▽｀)ノノ
+感谢所有参与到开发/测试中的朋友们，是大家的帮助让 MAA 越来越好！ (*´▽｀)ノノ
 
-- 感谢 [tcyh035](https://github.com/tcyh035) 帮忙设计重构 WPF 图形界面
-- 感谢 [LoveLoliii](https://github.com/LoveLoliii) 提供公开招募算法及数据
-- 感谢 [dantmnf](https://github.com/dantmnf) 提供各种 adb 及其他逻辑处理思路
-- 感谢 [泰迪](https://github.com/yuanyan3060) 提供的地图格子识别算法及开源库
+[![Contributors](https://contributors-img.web.app/image?repo=MaaAssistantArknights/MaaAssistantArknights)](https://github.com/MaaAssistantArknights/MaaAssistantArknights/graphs/contributors)
 
 ## 开发相关
 
 ### Windows
 
-直接使用 Visual Studio 2019 或更高版本打开 `MeoAssistantArknights.sln` 即可，所有环境都是配置好的
+直接使用 Visual Studio 2022 ~~或更高版本~~ 打开 `MeoAssistantArknights.sln` 即可，所有环境都是配置好的
 
 ### Linux | macOS
 
@@ -135,11 +132,8 @@ MAA 的意思是 MAA Assistant Arknights
 
 ## 广告
 
-[B 站直播间](https://live.bilibili.com/2808861)：每晚直播敲代码，近期很长一段时间应该都是在写本软件  
-
-[QQ 群：平躺天堂](https://jq.qq.com/?_wv=1027&k=PiPtKgkJ)：舟游群，欢迎加入~  
-[QQ 群：内卷地狱](https://jq.qq.com/?_wv=1027&k=ypbzXcA2)：技术群，欢迎加入~  
-
+[B 站直播间](https://live.bilibili.com/2808861)：每晚直播敲代码，近期很长一段时间应该都是在写本软件~  
+[舟无关技术交流群](https://jq.qq.com/?_wv=1027&k=ypbzXcA2)：内卷地狱！  
 [开发者群](https://jq.qq.com/?_wv=1027&k=JM9oCk3C)
 
 如果觉得软件对你有帮助，帮忙点个 Star 吧！~（网页最上方右上角的小星星），这就是对我最大的支持了！

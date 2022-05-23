@@ -27,12 +27,14 @@ namespace asst
 
         void exec_click_task(const Rect& matched_rect);
         void exec_swipe_task(ProcessTaskAction action);
+        void exec_slowly_swipe_task(ProcessTaskAction action);
 
         std::vector<std::string> m_raw_tasks_name;
         std::vector<std::string> m_cur_tasks_name;
         std::unordered_map<std::string, int> m_rear_delay;
         std::unordered_map<std::string, int> m_times_limit;
         std::unordered_map<std::string, int> m_exec_times;
-        int m_task_delay = 0;
+        static constexpr int TaskDelayUnsetted = -1;
+        int m_task_delay = TaskDelayUnsetted;
     };
 }

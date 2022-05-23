@@ -42,17 +42,22 @@ namespace MeoAsstGui
 
         public static bool Load()
         {
-            try
+            if (File.Exists(_configFilename))
             {
-                using (StreamReader sr = new StreamReader(_configFilename))
+                try
                 {
-                    string jsonStr = sr.ReadToEnd();
+                    string jsonStr = File.ReadAllText(_configFilename);
 
                     // 文件存在但为空，会读出来一个null，感觉c#这库有bug，如果是null 就赋值一个空JObject
                     _viewStatus = (JObject)JsonConvert.DeserializeObject(jsonStr) ?? new JObject();
                 }
+                catch (Exception)
+                {
+                    _viewStatus = new JObject();
+                    return false;
+                }
             }
-            catch (Exception)
+            else
             {
                 _viewStatus = new JObject();
                 return false;

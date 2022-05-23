@@ -120,13 +120,13 @@ namespace MeoAsstGui
                 RecruitInfo = "正在连接模拟器……";
                 var task = Task.Run(() =>
                 {
-                    return asstProxy.AsstCatch();
+                    return asstProxy.AsstConnect();
                 });
                 _catched = await task;
             }
             if (!_catched)
             {
-                RecruitInfo = "连接模拟器失败，请参考使用说明处理";
+                RecruitInfo = "连接模拟器失败，请检查连接设置";
                 return;
             }
             RecruitInfo = "正在识别……";
@@ -152,7 +152,6 @@ namespace MeoAsstGui
             }
 
             asstProxy.AsstStartRecruitCalc(levelList.ToArray(), levelList.Count, AutoSetTime);
-            asstProxy.AsstStart();
         }
     }
 }
