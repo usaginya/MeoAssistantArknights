@@ -48,12 +48,15 @@ namespace asst
         SkillUsage,                 // 技能用法
         SwitchSpeed,                // 切换二倍速
         BulletTime,                 // 使用 1/5 的速度（点击任意干员），会在下一个任意操作后恢复原速度
-        UseAllSkill                 // 使用所有技能，仅肉鸽模式
+        UseAllSkill,                // 使用所有技能，仅肉鸽模式
+        Output,                     // 仅输出，什么都不操作，界面上也不显示
+        SkillDaemon,                // 什么都不做，有技能开技能，直到战斗结束
     };
 
     struct BattleAction             // 操作
     {
         int kills = 0;
+        int cost_changes = 0;
         BattleActionType type = BattleActionType::Deploy;
         std::string group_name;     // 目标名，若 type >= SwitchSpeed, group_name 为空
         Point location;
@@ -62,10 +65,17 @@ namespace asst
         int pre_delay = 0;
         int rear_delay = 0;
         int time_out = INT_MAX;
+        std::string doc;
+        std::string doc_color;
     };
 
-    struct BattleActionsGroup
+    struct BattleCopilotData
     {
+        std::string minimum_required;
+        std::string title;
+        std::string title_color;
+        std::string details;
+        std::string details_color;
         std::unordered_map<std::string, std::vector<BattleDeployOper>> groups;
         std::vector<BattleAction> actions;
     };

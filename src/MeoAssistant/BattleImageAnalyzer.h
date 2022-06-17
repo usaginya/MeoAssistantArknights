@@ -19,13 +19,14 @@ namespace asst
             Cost = 32,       // 费用
             Vacancies = 64,  // 剩余可部署干员数
             // 肉鸽模式需要用到的识别
-            Roguelike = Home | HP | Oper | Skill
+            Roguelike = Home | Oper
         };
     public:
         using AbstractImageAnalyzer::AbstractImageAnalyzer;
         virtual ~BattleImageAnalyzer() = default;
 
         bool set_target(int target);
+        void set_pre_total_kills(int pre_total_kills);
         virtual bool analyze() override;
 
         virtual const std::vector<BattleRealTimeOper>& get_opers() const noexcept;
@@ -34,6 +35,8 @@ namespace asst
         const std::vector<Rect>& get_ready_skills() const noexcept;
         int get_hp() const noexcept;
         int get_kills() const noexcept;
+        int get_total_kills() const noexcept;
+        int get_cost() const noexcept;
 
         void clear() noexcept;
 
@@ -52,6 +55,7 @@ namespace asst
         bool vacancies_analyze();// 识别剩余可部署人数
 
         int m_target = 0;                           // 待识别的目标
+        int m_pre_total_kills = 0;                  // 之前的击杀总数，因为击杀数经常识别不准所以依赖外部传入作为参考
 
         /* 识别结果缓存 */
         std::vector<BattleRealTimeOper> m_opers;    // 下方干员信息
@@ -59,6 +63,7 @@ namespace asst
         std::vector<Rect> m_ready_skills;           // 可以释放的技能（Rect实际是干员的位置）
         int m_hp = 0;                               // 剩余生命值
         int m_kills = 0;                            // 击杀数
+        int m_total_kills = 0;                      // 击杀总数
         int m_cost = 0;                             // 部署费用
     };
 }

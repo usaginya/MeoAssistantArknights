@@ -1,10 +1,11 @@
 #include "RoguelikeSkillSelectionImageAnalyzer.h"
 
 #include "AsstUtils.hpp"
-#include "OcrImageAnalyzer.h"
+#include "OcrWithPreprocessImageAnalyzer.h"
 #include "MultiMatchImageAnalyzer.h"
 #include "TaskData.h"
 #include "Logger.hpp"
+#include "Resource.h"
 
 bool asst::RoguelikeSkillSelectionImageAnalyzer::analyze()
 {
@@ -16,6 +17,13 @@ bool asst::RoguelikeSkillSelectionImageAnalyzer::analyze()
     }
 
     const auto& flags = flag_analyzer.get_result();
+
+    if (flags.size() > 13) {
+        // https://github.com/MaaAssistantArknights/MaaAssistantArknights/issues/669
+        // 不知道为什么会匹配出来一堆结果，得分完全相同，坐标间隔还特别有规律。这种情况直接报错然后重试
+        Log.error("Too many flags");
+        return false;
+    }
 
     int unknow_index = 0;
     for (const auto& flag : flags) {
@@ -35,25 +43,20 @@ bool asst::RoguelikeSkillSelectionImageAnalyzer::analyze()
 
 std::string asst::RoguelikeSkillSelectionImageAnalyzer::name_analyze(const Rect& roi)
 {
-    OcrImageAnalyzer analyzer;
-    auto name_task_ptr = Task.get("Roguelike1SkillSelectionName");
+    OcrWithPreprocessImageAnalyzer analyzer;
+    auto name_task_ptr = std::dynamic_pointer_cast<OcrTaskInfo>(Task.get("Roguelike1SkillSelectionName"));
     analyzer.set_task_info(name_task_ptr);
-    analyzer.set_image(m_image, roi.move(name_task_ptr->rect_move));
+    analyzer.set_image(m_image, roi.move(name_task_ptr->roi));
+    analyzer.set_required(Resrc.roguelike_recruit().get_oper_order());
     analyzer.set_replace(
         std::dynamic_pointer_cast<OcrTaskInfo>(
-            Task.get("Roguelike1RecruitData"))
+            Task.get("CharsNameOcrReplace"))
         ->replace_map);
 
     if (!analyzer.analyze()) {
-        return std::string();
+        return {};
     }
-    analyzer.sort_result_by_score();
-    for (const auto& result : analyzer.get_result()) {
-        if (result.text.find("临时招募") == std::string::npos) {
-            return result.text;
-        }
-    }
-    return std::string();
+    return analyzer.get_result().front().text;
 }
 
 std::vector<asst::Rect> asst::RoguelikeSkillSelectionImageAnalyzer::skill_analyze(const Rect& roi)

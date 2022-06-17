@@ -12,16 +12,21 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Notification.Wpf.Constants;
 using Notification.Wpf.Controls;
 using Stylet;
 using StyletIoC;
+using DragEventArgs = System.Windows.DragEventArgs;
+using Screen = Stylet.Screen;
 
 namespace MeoAsstGui
 {
@@ -37,9 +42,16 @@ namespace MeoAsstGui
             _windowManager = windowManager;
             DisplayName = "自动战斗 Beta";
             LogItemViewModels = new ObservableCollection<LogItemViewModel>();
+            AddLog("小提示：请手动打开游戏有“开始行动”按钮的界面再使用本功能；\n\n如果想借好友助战可以关闭“自动编队”，手动选择好干员后再开始；\n\n模拟悖论则需要关闭“自动编队”，并自己选好技能处于“开始模拟”按钮的界面再开始", "dark");
         }
 
         public void AddLog(string content, string color = "Gray", string weight = "Regular")
+        {
+            LogItemViewModels.Add(new LogItemViewModel(content, color, weight));
+            //LogItemViewModels.Insert(0, new LogItemViewModel(time + content, color, weight));
+        }
+
+        public void AddLogWithUrl(string content, string url, string color = "Gray", string weight = "Regular")
         {
             LogItemViewModels.Add(new LogItemViewModel(content, color, weight));
             //LogItemViewModels.Insert(0, new LogItemViewModel(time + content, color, weight));
@@ -62,12 +74,104 @@ namespace MeoAsstGui
             LogItemViewModels.Clear();
         }
 
-        private string _filename;
+        private string _filename = "";
 
         public string Filename
         {
             get => _filename;
-            set => SetAndNotify(ref _filename, value);
+            set
+            {
+                SetAndNotify(ref _filename, value);
+                _updateFileDoc(_filename);
+            }
+        }
+
+        private void _updateFileDoc(string filename)
+        {
+            ClearLog();
+
+            if (File.Exists(filename))
+            {
+                try
+                {
+                    string jsonStr = File.ReadAllText(filename);
+
+                    var json = (JObject)JsonConvert.DeserializeObject(jsonStr);
+                    if (json == null || !json.ContainsKey("doc"))
+                    {
+                        return;
+                    }
+                    var doc = (JObject)json["doc"];
+
+                    string title = "";
+                    if (doc.ContainsKey("title"))
+                    {
+                        title = doc["title"].ToString();
+                    }
+                    if (title.Length != 0)
+                    {
+                        string title_color = "black";
+                        if (doc.ContainsKey("title_color"))
+                        {
+                            title_color = doc["title_color"].ToString();
+                        }
+                        AddLog(title, title_color);
+                    }
+
+                    string details = "";
+                    if (doc.ContainsKey("details"))
+                    {
+                        details = doc["details"].ToString();
+                    }
+                    if (details.Length != 0)
+                    {
+                        string details_color = "black";
+                        if (doc.ContainsKey("details_color"))
+                        {
+                            details_color = doc["details_color"].ToString();
+                        }
+                        AddLog(details, details_color);
+
+                        {
+                            Url = "";
+                            var linkParser = new Regex(@"(?:https?://)\S+\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+                            foreach (Match m in linkParser.Matches(details))
+                            {
+                                Url = m.Value;
+                                break;
+                            }
+                        }
+                    }
+
+                    AddLog("", "black");
+                    int count = 0;
+                    foreach (JObject oper in json["opers"])
+                    {
+                        count++;
+                        AddLog(string.Format("{0}, {1}技能", oper["name"], oper["skill"]), "black");
+                    }
+
+                    if (json.ContainsKey("groups"))
+                    {
+                        foreach (JObject group in json["groups"])
+                        {
+                            count++;
+                            string group_name = group["name"].ToString() + ": ";
+                            var operinfos = new List<string>();
+                            foreach (JObject oper in group["opers"])
+                            {
+                                operinfos.Add(string.Format("{0}{1}", oper["name"], oper["skill"]));
+                            }
+                            AddLog(group_name + string.Join("/", operinfos), "black");
+                        }
+                    }
+                    AddLog(string.Format("共{0}名干员", count), "black");
+                }
+                catch (Exception)
+                {
+                }
+            }
         }
 
         public void SelectFile()
@@ -82,7 +186,30 @@ namespace MeoAsstGui
             }
         }
 
-        private bool _form = true;
+        public void DropFile(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                return;
+            }
+            var filename = ((Array)e.Data.GetData(DataFormats.FileDrop))?.GetValue(0).ToString();
+            if (filename == null)
+            {
+                return;
+            }
+            if (filename.EndsWith(".json"))
+            {
+                Filename = filename;
+            }
+            else
+            {
+                Filename = "";
+                ClearLog();
+                AddLog("此文件非json文件", "darkred");
+            }
+        }
+
+        private bool _form = false;
 
         public bool Form
         {
@@ -98,19 +225,22 @@ namespace MeoAsstGui
             AddLog("正在连接模拟器……");
 
             var asstProxy = _container.Get<AsstProxy>();
+            string errMsg = "";
+            var task = Task.Run(() =>
+            {
+                return asstProxy.AsstConnect(ref errMsg);
+            });
+            _catched = await task;
             if (!_catched)
             {
-                var task = Task.Run(() =>
-                {
-                    return asstProxy.AsstConnect();
-                });
-                _catched = await task;
-            }
-            if (!_catched)
-            {
-                AddLog("连接模拟器失败\n请检查连接设置", "darkred");
+                AddLog(errMsg, "darkred");
                 return;
             }
+            if (errMsg.Length != 0)
+            {
+                AddLog(errMsg, "darkred");
+            }
+
             if (Filename.Length == 0 || !File.Exists(Filename))
             {
                 AddLog("作业文件不存在", "darkred");
@@ -132,9 +262,18 @@ namespace MeoAsstGui
                 return;
             }
 
-            asstProxy.AsstStartCopilot(data["stage_name"].ToString(), Filename, Form);
-            Idle = false;
-            AddLog("Star Burst Stream!");
+            const string _newfilename = "resource/_temp_copilot.json";
+            File.WriteAllText(_newfilename, data.ToString());
+            bool ret = asstProxy.AsstStartCopilot(data["stage_name"].ToString(), _newfilename, Form);
+            if (ret)
+            {
+                Idle = false;
+                AddLog("Star Burst Stream!");
+            }
+            else
+            {
+                AddLog("读取 JSON 作业文件出错\n请检查文件内容", "darkred");
+            }
         }
 
         public void Stop()
@@ -142,6 +281,28 @@ namespace MeoAsstGui
             var asstProxy = _container.Get<AsstProxy>();
             asstProxy.AsstStop();
             Idle = true;
+        }
+
+        private string _url = "";
+
+        public string Url
+        {
+            get => _url.Length > 0 ? "视频链接" : "";
+            set => SetAndNotify(ref _url, value);
+        }
+
+        public void Hyperlink_Click()
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_url))
+                {
+                    Process.Start(new ProcessStartInfo(_url));
+                }
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 }

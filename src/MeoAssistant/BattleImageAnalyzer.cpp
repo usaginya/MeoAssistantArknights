@@ -4,7 +4,7 @@
 
 #include "MultiMatchImageAnalyzer.h"
 #include "MatchImageAnalyzer.h"
-#include "OcrImageAnalyzer.h"
+#include "OcrWithFlagTemplImageAnalyzer.h"
 #include "HashImageAnalyzer.h"
 #include "Logger.hpp"
 #include "TaskData.h"
@@ -13,6 +13,11 @@ bool asst::BattleImageAnalyzer::set_target(int target)
 {
     m_target = target;
     return true;
+}
+
+void asst::BattleImageAnalyzer::set_pre_total_kills(int pre_total_kills)
+{
+    m_pre_total_kills = pre_total_kills;
 }
 
 bool asst::BattleImageAnalyzer::analyze()
@@ -86,6 +91,16 @@ int asst::BattleImageAnalyzer::get_kills() const noexcept
     return m_kills;
 }
 
+int asst::BattleImageAnalyzer::get_total_kills() const noexcept
+{
+    return m_total_kills;
+}
+
+int asst::BattleImageAnalyzer::get_cost() const noexcept
+{
+    return m_cost;
+}
+
 void asst::BattleImageAnalyzer::clear() noexcept
 {
     m_opers.clear();
@@ -105,7 +120,7 @@ bool asst::BattleImageAnalyzer::opers_analyze()
     if (!flags_analyzer.analyze()) {
         return false;
     }
-    flags_analyzer.sort_result();
+    flags_analyzer.sort_result_horizontal();
 
     const auto click_move = Task.get("BattleOperClickRange")->rect_move;
     const auto role_move = Task.get("BattleOperRoleRange")->rect_move;
@@ -167,7 +182,7 @@ asst::BattleRole asst::BattleImageAnalyzer::oper_role_analyze(const Rect& roi)
 
     MatchImageAnalyzer role_analyzer(m_image);
 
-    BattleRole result = BattleRole::Unknown;
+    auto result = BattleRole::Unknown;
     double max_score = 0;
     for (auto&& [role, role_name] : RolesName) {
         role_analyzer.set_task_info("BattleOperRole" + role_name);
@@ -409,7 +424,7 @@ bool asst::BattleImageAnalyzer::hp_analyze()
     for (const std::string& num_name : hash_analyzer.get_min_dist_name()) {
         if (num_name.empty()) {
             Log.error("hash result is empty");
-            return 0;
+            return false;
         }
         hp *= 10;
         hp += num_name.at(0) - '0';
@@ -424,33 +439,44 @@ bool asst::BattleImageAnalyzer::hp_analyze()
 
 bool asst::BattleImageAnalyzer::kills_analyze()
 {
-    const auto task_ptr = Task.get("BattleKillsFlag");
-    MatchImageAnalyzer flag_analzyer(m_image);
-    flag_analzyer.set_task_info(task_ptr);
-    if (!flag_analzyer.analyze()) {
-        return false;
-    }
+    OcrWithFlagTemplImageAnalyzer kills_analyzer(m_image);
+    kills_analyzer.set_task_info("BattleKillsFlag", "BattleKills");
+    kills_analyzer.set_replace(
+        std::dynamic_pointer_cast<OcrTaskInfo>(Task.get("NumberOcrReplace"))->replace_map);
 
-    auto kills_roi = flag_analzyer.get_result().rect.move(task_ptr->rect_move);
-    OcrImageAnalyzer kills_analyzer(m_image);
-    kills_analyzer.set_roi(kills_roi);
     if (!kills_analyzer.analyze()) {
         return false;
     }
-    kills_analyzer.sort_result_by_score();
 
-    std::string kills_text;
-    size_t pos = std::string::npos;
-    for (auto& res : kills_analyzer.get_result()) {
-        // 这里的结果应该是 "击杀数/总的敌人数"，例如 "0/41"
-        pos = res.text.find('/');
-        if (pos != std::string::npos) {
-            kills_text = res.text;
-            break;
-        }
-    }
-    if (pos == std::string::npos) {
+    std::string kills_text = kills_analyzer.get_result().front().text;
+    if (kills_text.empty()) {
         return false;
+    }
+
+    size_t pos = kills_text.find('/');
+    if (pos == std::string::npos) {
+        Log.warn("cannot found flag /");
+        // 这种时候绝大多数是把 "0/41" 中的 '/' 识别成了别的什么东西（其中又有绝大部分情况是识别成了 '1'）
+        // 所以这里依赖 m_pre_total_kills 转一下
+        if (m_pre_total_kills == 0) {
+            // 第一次识别就识别错了，识别成了 "0141"
+            if (kills_text.at(0) == '0') {
+                pos = 1;
+            }
+            else {
+                Log.error("m_pre_total_kills is zero");
+                return false;
+            }
+        }
+        else {
+            size_t pre_pos = kills_text.find(std::to_string(m_pre_total_kills));
+            if (pre_pos == std::string::npos || pre_pos == 0) {
+                Log.error("can't get pre_pos");
+                return false;
+            }
+            Log.trace("pre total kills pos:", pre_pos);
+            pos = pre_pos - 1;
+        }
     }
 
     // 例子中的"0"
@@ -462,20 +488,36 @@ bool asst::BattleImageAnalyzer::kills_analyze()
     }
     int cur_kills = std::stoi(kills_count);
     m_kills = std::max(m_kills, cur_kills);
-    Log.trace("Kills:", m_kills, cur_kills);
+
+    // 例子中的"41"
+    std::string total_kills = kills_text.substr(pos + 1, std::string::npos);
+    int cur_total_kills = 0;
+    if (total_kills.empty() ||
+        !std::all_of(total_kills.cbegin(), total_kills.cend(),
+            [](char c) -> bool {return std::isdigit(c);})) {
+        Log.warn("total kills recognition failed, set to", m_pre_total_kills);
+        cur_total_kills = m_pre_total_kills;
+    }
+    else {
+        cur_total_kills = std::stoi(total_kills);
+    }
+    m_total_kills = std::max(cur_total_kills, m_pre_total_kills);
+
+    Log.trace("Kills:", m_kills, "/", m_total_kills);
     return true;
 }
 
 bool asst::BattleImageAnalyzer::cost_analyze()
 {
-    OcrImageAnalyzer cost_analyzer(m_image);
-    cost_analyzer.set_task_info("BattleKillsFlag");
+    OcrWithPreprocessImageAnalyzer cost_analyzer(m_image);
+    cost_analyzer.set_task_info("BattleCostData");
+    cost_analyzer.set_replace(
+        std::dynamic_pointer_cast<OcrTaskInfo>(Task.get("NumberOcrReplace"))->replace_map);
 
     if (!cost_analyzer.analyze()) {
         return false;
     }
 
-    cost_analyzer.sort_result_by_score();
     std::string cost_str = cost_analyzer.get_result().front().text;
 
     if (cost_str.empty() ||

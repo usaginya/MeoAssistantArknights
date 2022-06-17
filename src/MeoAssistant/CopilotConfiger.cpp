@@ -8,7 +8,11 @@ bool asst::CopilotConfiger::parse(const json::value& json)
 {
     std::string stage_name = json.at("stage_name").as_string();
 
-    BattleActionsGroup battle_actions;
+    BattleCopilotData battle_actions;
+    battle_actions.title = json.get("doc", "title", std::string());
+    battle_actions.title_color = json.get("doc", "title_color", std::string());
+    battle_actions.details = json.get("doc", "details", std::string());
+    battle_actions.details_color = json.get("doc", "details_color", std::string());
 
     if (json.contains("groups")) {
         for (const auto& group_info : json.at("groups").as_array()) {
@@ -63,17 +67,31 @@ bool asst::CopilotConfiger::parse(const json::value& json)
             { "speedup", BattleActionType::SwitchSpeed },
             { "二倍速", BattleActionType::SwitchSpeed },
 
-            { "BulletTime", BattleActionType::SwitchSpeed },
-            { "BULLETTIME", BattleActionType::SwitchSpeed },
-            { "Bullettime", BattleActionType::SwitchSpeed },
-            { "bullettime", BattleActionType::SwitchSpeed },
-            { "子弹时间", BattleActionType::SwitchSpeed },
+            { "BulletTime", BattleActionType::BulletTime },
+            { "BULLETTIME", BattleActionType::BulletTime },
+            { "Bullettime", BattleActionType::BulletTime },
+            { "bullettime", BattleActionType::BulletTime },
+            { "子弹时间", BattleActionType::BulletTime },
 
             { "SkillUsage", BattleActionType::SkillUsage },
             { "SKILLUSAGE", BattleActionType::SkillUsage },
             { "Skillusage", BattleActionType::SkillUsage },
             { "skillusage", BattleActionType::SkillUsage },
             { "技能用法", BattleActionType::SkillUsage },
+
+            { "Output", BattleActionType::Output },
+            { "OUTPUT", BattleActionType::Output },
+            { "output", BattleActionType::Output },
+            { "输出", BattleActionType::Output },
+            { "打印", BattleActionType::Output },
+
+            { "SkillDaemon", BattleActionType::SkillDaemon },
+            { "skilldaemon", BattleActionType::SkillDaemon },
+            { "SKILLDAEMON", BattleActionType::SkillDaemon },
+            { "Skilldaemon", BattleActionType::SkillDaemon },
+            { "DoNothing", BattleActionType::SkillDaemon },
+            { "摆完挂机", BattleActionType::SkillDaemon },
+            { "开摆", BattleActionType::SkillDaemon },
         };
 
         std::string type_str = action_info.get("type", "Deploy");
@@ -86,6 +104,7 @@ bool asst::CopilotConfiger::parse(const json::value& json)
             action.type = BattleActionType::Deploy;
         }
         action.kills = action_info.get("kills", 0);
+        action.cost_changes = action_info.get("cost_changes", 0);
         action.group_name = action_info.get("name", std::string());
 
         action.location.x = action_info.get("location", 0, 0);
@@ -131,6 +150,8 @@ bool asst::CopilotConfiger::parse(const json::value& json)
         action.pre_delay = action_info.get("pre_delay", 0);
         action.rear_delay = action_info.get("rear_delay", 0);
         action.time_out = action_info.get("timeout", INT_MAX);
+        action.doc = action_info.get("doc", std::string());
+        action.doc_color = action_info.get("doc_color", std::string());
 
         battle_actions.actions.emplace_back(std::move(action));
     }

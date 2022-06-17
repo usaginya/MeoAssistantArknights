@@ -1,6 +1,6 @@
 #include "AsstCaller.h"
 
-#include <string.h>
+#include <cstring>
 #include <iostream>
 
 #include <meojson/json.hpp>
@@ -40,7 +40,7 @@ static bool inited = false;
 bool AsstLoadResource(const char* path)
 {
 #ifdef _WIN32
-    std::string working_path = asst::utils::utf8_to_gbk(path);
+    std::string working_path = asst::utils::utf8_to_ansi(path);
 #else
     std::string working_path = std::string(path);
 #endif
@@ -86,7 +86,7 @@ bool AsstConnect(AsstHandle handle, const char* adb_path, const char* address, c
     }
 
 #ifdef _WIN32
-    return handle->connect(asst::utils::utf8_to_gbk(adb_path), address, config ? config : std::string());
+    return handle->connect(asst::utils::utf8_to_ansi(adb_path), address, config ? config : std::string());
 #else
     return handle->connect(adb_path, address, config ? config : std::string());
 #endif
@@ -122,7 +122,7 @@ TaskId AsstAppendTask(AsstHandle handle, const char* type, const char* params)
 bool AsstSetTaskParams(AsstHandle handle, TaskId id, const char* params)
 {
     if (!inited || handle == nullptr) {
-        return 0;
+        return false;
     }
 
     return handle->set_task_params(id, params ? params : "");

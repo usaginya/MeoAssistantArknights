@@ -5,7 +5,7 @@
 #include "BattleProcessTask.h"
 #include "BattleFormationTask.h"
 
-asst::CopilotTask::CopilotTask(AsstCallback callback, void* callback_arg)
+asst::CopilotTask::CopilotTask(const AsstCallback& callback, void* callback_arg)
     : PackageTask(callback, callback_arg, TaskType),
     m_formation_task_ptr(std::make_shared<BattleFormationTask>(callback, callback_arg, TaskType)),
     m_battle_task_ptr(std::make_shared<BattleProcessTask>(callback, callback_arg, TaskType))
@@ -19,7 +19,7 @@ asst::CopilotTask::CopilotTask(AsstCallback callback, void* callback_arg)
     m_subtasks.emplace_back(m_formation_task_ptr)->set_ignore_error(false);
 
     auto start_2_tp = std::make_shared<ProcessTask>(callback, callback_arg, TaskType);
-    start_2_tp->set_tasks({ "BattleStartNormal", "BattleStartRaid", "BattleStartExercise" })
+    start_2_tp->set_tasks({ "BattleStartNormal", "BattleStartRaid", "BattleStartExercise", "BattleStartSimulation" })
         .set_ignore_error(false);
     m_subtasks.emplace_back(start_2_tp);
 

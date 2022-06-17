@@ -4,7 +4,7 @@
 #include "RecruitCalcTask.h"
 #include "ProcessTask.h"
 
-asst::RecruitTask::RecruitTask(AsstCallback callback, void* callback_arg)
+asst::RecruitTask::RecruitTask(const AsstCallback& callback, void* callback_arg)
     : PackageTask(callback, callback_arg, TaskType),
     m_recruit_begin_task_ptr(std::make_shared<ProcessTask>(callback, callback_arg, TaskType)),
     m_auto_recruit_task_ptr(std::make_shared<AutoRecruitTask>(callback, callback_arg, TaskType)),
@@ -46,6 +46,7 @@ bool asst::RecruitTask::set_params(const json::value& params)
     int times = params.get("times", 0);
     bool expedite = params.get("expedite", false);
     [[maybe_unused]] int expedite_times = params.get("expedite_times", 0);
+    bool skip_robot = params.get("skip_robot", true);
 
     if (times <= 0 || confirm.empty()) {   // 仅识别的情况
         m_recruit_begin_task_ptr->set_enable(false);
@@ -63,7 +64,8 @@ bool asst::RecruitTask::set_params(const json::value& params)
             .set_need_refresh(refresh)
             .set_use_expedited(expedite)
             .set_select_level(std::move(select))
-            .set_confirm_level(std::move(confirm));
+            .set_confirm_level(std::move(confirm))
+            .set_skip_robot(skip_robot);
     }
 
     return true;

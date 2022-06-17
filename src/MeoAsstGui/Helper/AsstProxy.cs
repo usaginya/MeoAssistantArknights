@@ -12,6 +12,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -73,9 +74,45 @@ namespace MeoAsstGui
             _callback = CallbackFunction;
         }
 
+        ~AsstProxy()
+        {
+            if (_handle != IntPtr.Zero)
+            {
+                AsstDestroy();
+            }
+        }
+
+        private string _curResource = "";
+
+        public bool LoadGlobalResource()
+        {
+            bool loaded = true;
+            var settingsModel = _container.Get<SettingsViewModel>();
+            if (_curResource.Length == 0
+                && settingsModel.ClientType == "YoStarEN"
+                && _curResource != settingsModel.ClientType)
+            {
+                loaded = AsstLoadResource(System.IO.Directory.GetCurrentDirectory() + "\\resource\\global\\YoStarEN");
+                _curResource = "YoStarEN";
+            }
+            // 这种是手贱看到美服点了一下，又点回官服的
+            else if (_curResource.Length != 0
+                && (settingsModel.ClientType == "Official" || settingsModel.ClientType == "Bilibili" || settingsModel.ClientType == String.Empty))
+            {
+                loaded = AsstLoadResource(System.IO.Directory.GetCurrentDirectory());
+                _curResource = "";
+            }
+            return loaded;
+        }
+
         public void Init()
         {
+            // basic resource for CN client
             bool loaded = AsstLoadResource(System.IO.Directory.GetCurrentDirectory());
+            _curResource = "";
+
+            loaded = LoadGlobalResource();
+
             _handle = AsstCreateEx(_callback, IntPtr.Zero);
 
             if (loaded == false || _handle == IntPtr.Zero)
@@ -86,8 +123,22 @@ namespace MeoAsstGui
                     Environment.Exit(0);
                 });
             }
-            var tvm = _container.Get<TaskQueueViewModel>();
-            tvm.Idle = true;
+            var mainModel = _container.Get<TaskQueueViewModel>();
+            mainModel.Idle = true;
+            var settingsModel = _container.Get<SettingsViewModel>();
+
+            Execute.OnUIThread(async () =>
+            {
+                var task = Task.Run(() =>
+                {
+                    settingsModel.TryToStartEmulator();
+                });
+                await task;
+                if (settingsModel.RunDirectly)
+                {
+                    mainModel.LinkStart();
+                }
+            });
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
@@ -137,7 +188,8 @@ namespace MeoAsstGui
                     Environment.Exit(0);
                     break;
 
-                case AsstMsg.ConnectionError:
+                case AsstMsg.ConnectionInfo:
+                    procConnectInfo(details);
                     break;
 
                 case AsstMsg.AllTasksCompleted:
@@ -157,6 +209,39 @@ namespace MeoAsstGui
             }
         }
 
+        private bool connected = false;
+
+        private void procConnectInfo(JObject details)
+        {
+            var what = details["what"].ToString();
+            var svm = _container.Get<SettingsViewModel>();
+            var mainModel = _container.Get<TaskQueueViewModel>();
+            switch (what)
+            {
+                case "Connected":
+                    connected = true;
+                    svm.ConnectAddress = details["details"]["address"].ToString();
+                    break;
+
+                case "UnsupportedResolution":
+                    connected = false;
+                    mainModel.AddLog("分辨率过低，请设置为 720p 或更高", "darkred");
+                    break;
+
+                case "ResolutionError":
+                    connected = false;
+                    mainModel.AddLog("分辨率获取失败，建议重启电脑，或更换模拟器后再试", "darkred");
+                    break;
+
+                case "Disconnect":
+                case "CommandExecFailed":
+                    connected = false;
+                    mainModel.AddLog("错误！连接断开！", "darkred");
+                    AsstStop();
+                    break;
+            }
+        }
+
         private void procTaskChainMsg(AsstMsg msg, JObject details)
         {
             string taskChain = details["taskchain"].ToString();
@@ -170,11 +255,17 @@ namespace MeoAsstGui
                 }
             }
             var mainModel = _container.Get<TaskQueueViewModel>();
+            var copilotModel = _container.Get<CopilotViewModel>();
 
             switch (msg)
             {
                 case AsstMsg.TaskChainError:
                     mainModel.AddLog("任务出错：" + taskChain, "darkred");
+                    if (taskChain == "Copilot")
+                    {
+                        copilotModel.Idle = true;
+                        copilotModel.AddLog("战斗出错！", "darkred");
+                    }
                     break;
 
                 case AsstMsg.TaskChainStart:
@@ -183,6 +274,11 @@ namespace MeoAsstGui
 
                 case AsstMsg.TaskChainCompleted:
                     mainModel.AddLog("完成任务：" + taskChain);
+                    if (taskChain == "Copilot")
+                    {
+                        copilotModel.Idle = true;
+                        copilotModel.AddLog("完成战斗", "darkcyan");
+                    }
                     break;
 
                 case AsstMsg.TaskChainExtraInfo:
@@ -196,6 +292,7 @@ namespace MeoAsstGui
                     {
                         toast.Show();
                     }
+                    copilotModel.Idle = true;
                     mainModel.CheckAndShutdown();
                     break;
             }
@@ -236,6 +333,10 @@ namespace MeoAsstGui
 
             switch (subTask)
             {
+                case "StartGameTask":
+                    mainModel.AddLog("打开客户端失败，请检查配置文件", "darkred");
+                    break;
+
                 case "AutoRecruitTask":
                     mainModel.AddLog("公招识别错误，已返回", "darkred");
                     break;
@@ -245,7 +346,8 @@ namespace MeoAsstGui
                     break;
 
                 case "ReportToPenguinStats":
-                    mainModel.AddLog("未知关卡，放弃上传企鹅", "darkred");
+                    var why = details["why"].ToString();
+                    mainModel.AddLog(why + "，放弃上传企鹅", "darkred");
                     break;
 
                 case "CheckStageValid":
@@ -350,6 +452,14 @@ namespace MeoAsstGui
                     case "Roguelike1StageTraderInvestSystemFull":
                         mainModel.AddLog("投资达到上限", "darkcyan");
                         break;
+
+                    case "RestartGameAndContinueFighting":
+                        mainModel.AddLog("游戏崩溃，重新启动", "darkgoldenrod");
+                        break;
+
+                    case "OfflineConfirm":
+                        mainModel.AddLog("游戏掉线，重新连接", "darkgoldenrod");
+                        break;
                 }
             }
         }
@@ -428,6 +538,16 @@ namespace MeoAsstGui
                     }
                     break;
 
+                case "RecruitRobotTag":
+                    {
+                        string special = subTaskDetails["tag"].ToString();
+                        using (var toast = new ToastNotification("公招提示"))
+                        {
+                            toast.AppendContentText(special).ShowRecruitRobot();
+                        }
+                    }
+                    break;
+
                 case "RecruitResult":
                     {
                         int level = (int)subTaskDetails["level"];
@@ -442,6 +562,16 @@ namespace MeoAsstGui
                         else
                         {
                             mainModel.AddLog(level + " 星 Tags", "darkcyan");
+                        }
+
+                        bool robot = (bool)subTaskDetails["robot"];
+                        if (robot)
+                        {
+                            using (var toast = new ToastNotification($"公招出小车了哦！"))
+                            {
+                                toast.AppendContentText(new string('★', 1)).ShowRecruitRobot(row: 2);
+                            }
+                            mainModel.AddLog(1 + " 星 Tag", "darkgray", "Bold");
                         }
                     }
                     break;
@@ -500,7 +630,28 @@ namespace MeoAsstGui
                     break;
 
                 case "BattleAction":
-                    copilotModel.AddLog("当前步骤：" + subTaskDetails["description"].ToString());
+                    {
+                        string doc = subTaskDetails["doc"].ToString();
+                        if (doc.Length != 0)
+                        {
+                            string color = subTaskDetails["doc_color"].ToString();
+                            copilotModel.AddLog(doc, color.Length == 0 ? "dark" : color);
+                        }
+                        var action = subTaskDetails["action"].ToString();
+                        if (action.Length != 0)
+                        {
+                            copilotModel.AddLog("当前步骤：" + action);
+                        }
+                    }
+                    break;
+
+                case "BattleActionDoc":
+                    //{
+                    //    string title_color = subTaskDetails["title_color"].ToString();
+                    //    copilotModel.AddLog(subTaskDetails["title"].ToString(), title_color.Length == 0 ? "dark" : title_color);
+                    //    string details_color = subTaskDetails["details_color"].ToString();
+                    //    copilotModel.AddLog(subTaskDetails["details"].ToString(), details_color.Length == 0 ? "dark" : details_color);
+                    //}
                     break;
             }
         }
@@ -527,16 +678,6 @@ namespace MeoAsstGui
                     }
                     break;
 
-                case "RecruitSpecialTag":
-                    {
-                        string special = subTaskDetails["tag"].ToString();
-                        using (var toast = new ToastNotification("公招提示"))
-                        {
-                            toast.AppendContentText(special).ShowRecruit();
-                        }
-                    }
-                    break;
-
                 case "RecruitResult":
                     {
                         string resultContent = string.Empty;
@@ -558,30 +699,55 @@ namespace MeoAsstGui
                             resultContent += "\n\n";
                         }
                         recruitModel.RecruitResult = resultContent;
-                        if (level >= 5)
-                        {
-                            using (var toast = new ToastNotification($"公招出 {level} 星了哦！"))
-                            {
-                                toast.AppendContentText(new string('★', level)).ShowRecruit(row: 2);
-                            }
-                        }
                     }
                     break;
             }
         }
 
-        public bool AsstConnect()
+        public bool AsstConnect(ref string error)
         {
+            if (!LoadGlobalResource())
+            {
+                error = "Load Global Resource Failed";
+                return false;
+            }
+
+            if (connected)
+            {
+                return true;
+            }
+
             var settings = _container.Get<SettingsViewModel>();
             if (settings.AdbPath == String.Empty ||
                 settings.ConnectAddress == String.Empty)
             {
-                return false;
+                if (!settings.RefreshAdbConfig(ref error))
+                {
+                    return false;
+                }
             }
-            else
+            settings.TryToSetBlueStacksHyperVAddress();
+
+            bool ret = AsstConnect(_handle, settings.AdbPath, settings.ConnectAddress, settings.ConnectConfig);
+
+            // 尝试默认的备选端口
+            if (!ret)
             {
-                return AsstConnect(_handle, settings.AdbPath, settings.ConnectAddress, settings.ConnectConfig);
+                foreach (var address in settings.DefaultAddress[settings.ConnectConfig])
+                {
+                    ret = AsstConnect(_handle, settings.AdbPath, address, settings.ConnectConfig);
+                    if (ret)
+                    {
+                        settings.ConnectAddress = address;
+                        break;
+                    }
+                }
             }
+            if (!ret)
+            {
+                error = "连接失败\n请检查连接设置";
+            }
+            return ret;
         }
 
         private bool AsstAppendTaskWithEncoding(string type, JObject task_params = null)
@@ -590,7 +756,7 @@ namespace MeoAsstGui
             return AsstAppendTask(_handle, type, JsonConvert.SerializeObject(task_params)) != 0;
         }
 
-        public bool AsstAppendFight(string stage, int max_medicine, int max_stone, int max_times)
+        public bool AsstAppendFight(string stage, int max_medicine, int max_stone, int max_times, string drops_item_id, int drops_item_quantity)
         {
             var task_params = new JObject();
             task_params["stage"] = stage;
@@ -598,7 +764,13 @@ namespace MeoAsstGui
             task_params["stone"] = max_stone;
             task_params["times"] = max_times;
             task_params["report_to_penguin"] = true;
+            if (drops_item_quantity != 0)
+            {
+                task_params["drops"] = new JObject();
+                task_params["drops"][drops_item_id] = drops_item_quantity;
+            }
             var settings = _container.Get<SettingsViewModel>();
+            task_params["client_type"] = settings.ClientType;
             task_params["penguin_id"] = settings.PenguinId;
             task_params["server"] = "CN";
             return AsstAppendTaskWithEncoding("Fight", task_params);
@@ -609,9 +781,12 @@ namespace MeoAsstGui
             return AsstAppendTaskWithEncoding("Award");
         }
 
-        public bool AsstAppendStartUp()
+        public bool AsstAppendStartUp(string client_type, bool enable)
         {
-            return AsstAppendTaskWithEncoding("StartUp");
+            var task_params = new JObject();
+            task_params["client_type"] = client_type;
+            task_params["start_game_enable"] = enable;
+            return AsstAppendTaskWithEncoding("StartUp", task_params);
         }
 
         public bool AsstAppendVisit()
@@ -628,7 +803,7 @@ namespace MeoAsstGui
             return AsstAppendTaskWithEncoding("Mall", task_params);
         }
 
-        public bool AsstAppendRecruit(int max_times, int[] select_level, int required_len, int[] confirm_level, int confirm_len, bool need_refresh, bool use_expedited)
+        public bool AsstAppendRecruit(int max_times, int[] select_level, int required_len, int[] confirm_level, int confirm_len, bool need_refresh, bool use_expedited, bool skip_robot)
         {
             var task_params = new JObject();
             task_params["refresh"] = need_refresh;
@@ -638,6 +813,7 @@ namespace MeoAsstGui
             task_params["set_time"] = true;
             task_params["expedite"] = use_expedited;
             task_params["expedite_times"] = max_times;
+            task_params["skip_robot"] = skip_robot;
             return AsstAppendTaskWithEncoding("Recruit", task_params);
         }
 
@@ -656,12 +832,6 @@ namespace MeoAsstGui
         {
             var task_params = new JObject();
             task_params["mode"] = mode;
-            task_params["opers"] = new JArray {
-                new JObject { { "name", "山" }, { "skill", 2 }, { "skill_usage", 2 } },
-                new JObject { { "name", "棘刺" }, { "skill", 3 }, { "skill_usage", 1 } },
-                new JObject { { "name", "芙蓉" }, { "skill", 1 }, { "skill_usage", 1 } },
-                new JObject { { "name", "梓兰" }, { "skill", 1 }, { "skill_usage", 1 } },
-            };
             return AsstAppendTaskWithEncoding("Roguelike", task_params);
         }
 
@@ -696,6 +866,11 @@ namespace MeoAsstGui
         {
             return AsstStop(_handle);
         }
+
+        public void AsstDestroy()
+        {
+            AsstDestroy(_handle);
+        }
     }
 
     public enum AsstMsg
@@ -703,7 +878,7 @@ namespace MeoAsstGui
         /* Global Info */
         InternalError = 0,          // 内部错误
         InitFailed,                 // 初始化失败
-        ConnectionError,            // 连接相关错误
+        ConnectionInfo,            // 连接相关错误
         AllTasksCompleted,          // 全部任务完成
         /* TaskChain Info */
         TaskChainError = 10000,     // 任务链执行/识别错误

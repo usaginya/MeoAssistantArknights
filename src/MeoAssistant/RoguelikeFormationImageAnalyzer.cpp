@@ -13,7 +13,7 @@ bool asst::RoguelikeFormationImageAnalyzer::analyze()
     if (!opers_analyzer.analyze()) {
         return false;
     }
-    opers_analyzer.sort_result();
+    opers_analyzer.sort_result_horizontal();
     const auto& all_opers = opers_analyzer.get_result();
     for (const MatchRect& oper_mr : all_opers) {
         FormationOper oper;
@@ -29,7 +29,7 @@ bool asst::RoguelikeFormationImageAnalyzer::analyze()
         }
 #endif
 
-        m_result.emplace_back(std::move(oper));
+        m_result.emplace_back(oper);
     }
 
     return !m_result.empty();

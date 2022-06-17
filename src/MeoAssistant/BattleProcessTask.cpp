@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <chrono>
+#include <future>
 
 #include "Controller.h"
 #include "Resource.h"
@@ -11,7 +12,7 @@
 #include "ProcessTask.h"
 
 #include "MatchImageAnalyzer.h"
-#include "OcrImageAnalyzer.h"
+#include "OcrWithPreprocessImageAnalyzer.h"
 #include "BattleImageAnalyzer.h"
 
 void asst::BattleProcessTask::set_stage_name(std::string name)
@@ -27,11 +28,21 @@ bool asst::BattleProcessTask::_run()
         return false;
     }
 
+    {
+        json::value info = basic_info_with_what("BattleActionDoc");
+        auto& details = info["details"];
+        details["title"] = m_copilot_data.title;
+        details["title_color"] = m_copilot_data.title_color;
+        details["details"] = m_copilot_data.details;
+        details["details_color"] = m_copilot_data.details_color;
+        callback(AsstMsg::SubTaskExtraInfo, info);
+    }
+
     while (!need_exit() && !analyze_opers_preview()) {
         std::this_thread::yield();
     }
 
-    for (const auto& action : m_actions_group.actions) {
+    for (const auto& action : m_copilot_data.actions) {
         if (need_exit()) {
             break;
         }
@@ -43,6 +54,8 @@ bool asst::BattleProcessTask::_run()
 
 bool asst::BattleProcessTask::get_stage_info()
 {
+    LogTraceFunction;
+
     const auto& tile = Resrc.tile();
 
     m_normal_tile_info = tile.calc(m_stage_name, false);
@@ -58,7 +71,7 @@ bool asst::BattleProcessTask::get_stage_info()
         return false;
     }
 
-    m_actions_group = copilot.get_actions(m_stage_name);
+    m_copilot_data = copilot.get_actions(m_stage_name);
 
     return true;
 }
@@ -68,59 +81,84 @@ bool asst::BattleProcessTask::analyze_opers_preview()
     {
         json::value info = basic_info_with_what("BattleAction");
         auto& details = info["details"];
-        details["description"] = "识别干员";
+        details["action"] = "识别干员";
+        details["doc"] = "";
+        details["doc_color"] = "";
         callback(AsstMsg::SubTaskExtraInfo, info);
+    }
+
+    MatchImageAnalyzer officially_begin_analyzer;
+    officially_begin_analyzer.set_task_info("BattleOfficiallyBegin");
+    cv::Mat image;
+    while (!need_exit()) {
+        image = m_ctrler->get_image();
+        officially_begin_analyzer.set_image(image);
+        if (officially_begin_analyzer.analyze()) {
+            break;
+        }
+        std::this_thread::yield();
     }
 
     BattleImageAnalyzer oper_analyzer;
     oper_analyzer.set_target(BattleImageAnalyzer::Target::Oper);
-
-    while (true) {
-        oper_analyzer.set_image(m_ctrler->get_image());
+    while (!need_exit()) {
+        image = m_ctrler->get_image();
+        oper_analyzer.set_image(image);
         if (oper_analyzer.analyze()) {
             break;
         }
         std::this_thread::yield();
     }
 
-    // 干员头像出来之后，还要过 2 秒左右才可以点击，这里要加个延时
-    sleep(Task.get("BattleWaitingToLoad")->rear_delay);
-    while (true) {
-        oper_analyzer.set_image(m_ctrler->get_image());
-        if (oper_analyzer.analyze()) {
+    // 识别一帧总击杀数
+    BattleImageAnalyzer kills_analyzer(image);
+    kills_analyzer.set_target(BattleImageAnalyzer::Target::Kills);
+    if (kills_analyzer.analyze()) {
+        m_kills = kills_analyzer.get_kills();
+        m_total_kills = kills_analyzer.get_total_kills();
+    }
+    auto draw = image.clone();
+
+    // 暂停游戏准备识别干员
+    // 在刚进入游戏的时候（画面刚刚完全亮起来的时候），点暂停是没反应的
+    // 所以这里一直点，直到真的点上了为止
+    while (!need_exit()) {
+        battle_pause();
+        image = m_ctrler->get_image();
+        officially_begin_analyzer.set_image(image);
+        if (!officially_begin_analyzer.analyze()) {
             break;
         }
         std::this_thread::yield();
     }
-    {
-        //#ifdef ASST_DEBUG
-        auto draw = m_ctrler->get_image();
+
+    auto draw_future = std::async(std::launch::async, [&]() {
         for (const auto& [loc, info] : m_normal_tile_info) {
             std::string text = "( " + std::to_string(loc.x) + ", " + std::to_string(loc.y) + " )";
             cv::putText(draw, text, cv::Point(info.pos.x - 30, info.pos.y), 1, 1.2, cv::Scalar(0, 0, 255), 2);
         }
 
         cv::imwrite("map.png", draw);
-        //#endif
-    }
-    battle_pause();
+    });
 
     auto opers = oper_analyzer.get_opers();
 
+    Rect cur_rect;
+    int click_delay = Task.get("BattleUseOper")->pre_delay;
     for (size_t i = 0; i != opers.size(); ++i) {
         const auto& cur_oper = oper_analyzer.get_opers();
         size_t offset = opers.size() > cur_oper.size() ? opers.size() - cur_oper.size() : 0;
-        m_ctrler->click(cur_oper.at(i - offset).rect);
+        cur_rect = cur_oper.at(i - offset).rect;
+        m_ctrler->click(cur_rect);
+        sleep(click_delay);
 
-        sleep(Task.get("BattleUseOper")->pre_delay);
+        image = m_ctrler->get_image();
 
-        auto image = m_ctrler->get_image();
-
-        OcrImageAnalyzer name_analyzer(image);
+        OcrWithPreprocessImageAnalyzer name_analyzer(image);
         name_analyzer.set_task_info("BattleOperName");
         name_analyzer.set_replace(
             std::dynamic_pointer_cast<OcrTaskInfo>(
-                Task.get("Roguelike1RecruitData"))
+                Task.get("CharsNameOcrReplace"))
             ->replace_map);
 
         std::string oper_name = "Unknown";
@@ -132,7 +170,7 @@ bool asst::BattleProcessTask::analyze_opers_preview()
 
         bool not_found = true;
         // 找出这个干员是哪个组里的，以及他的技能用法等
-        for (const auto& [group_name, deploy_opers] : m_actions_group.groups) {
+        for (const auto& [group_name, deploy_opers] : m_copilot_data.groups) {
             auto iter = std::find_if(deploy_opers.cbegin(), deploy_opers.cend(),
                 [&](const BattleDeployOper& deploy) -> bool {
                     return deploy.name == oper_name;
@@ -154,8 +192,12 @@ bool asst::BattleProcessTask::analyze_opers_preview()
         oper_analyzer.set_image(image);
         oper_analyzer.analyze();
     }
+
+    draw_future.wait();
+
+    m_ctrler->click(cur_rect);
+    sleep(click_delay);
     battle_pause();
-    cancel_selection();
 
     return true;
 }
@@ -227,11 +269,11 @@ bool asst::BattleProcessTask::update_opers_info(const cv::Mat& image)
             m_ctrler->click(cur_oper.rect);
             sleep(Task.get("BattleUseOper")->pre_delay);
 
-            OcrImageAnalyzer name_analyzer(m_ctrler->get_image());
+            OcrWithPreprocessImageAnalyzer name_analyzer(m_ctrler->get_image());
             name_analyzer.set_task_info("BattleOperName");
             name_analyzer.set_replace(
                 std::dynamic_pointer_cast<OcrTaskInfo>(
-                    Task.get("Roguelike1RecruitData"))
+                    Task.get("CharsNameOcrReplace"))
                 ->replace_map);
 
             if (name_analyzer.analyze()) {
@@ -239,8 +281,9 @@ bool asst::BattleProcessTask::update_opers_info(const cv::Mat& image)
                 oper_name = name_analyzer.get_result().front().text;
             }
             m_group_to_oper_mapping[oper_name] = BattleDeployOper{ oper_name };
+            m_ctrler->click(cur_oper.rect);
+            sleep(Task.get("BattleUseOper")->pre_delay);
             battle_pause();
-            cancel_selection();
         }
         else {
             oper_name = matched_iter->first;
@@ -260,22 +303,30 @@ bool asst::BattleProcessTask::do_action(const BattleAction& action)
 {
     json::value info = basic_info_with_what("BattleAction");
     auto& details = info["details"];
-    std::string desc;
+    std::string action_desc;
     switch (action.type) {
     case BattleActionType::Deploy:
-        desc = "部署 " + action.group_name;
+        action_desc = "部署 " + action.group_name;
         break;
     case BattleActionType::Retreat:
-        desc = "撤退 " + action.group_name;
+        action_desc = "撤退 " + action.group_name;
         break;
     case BattleActionType::UseSkill:
-        desc = "技能 " + action.group_name;
+        action_desc = "技能 " + action.group_name;
         break;
     case BattleActionType::SwitchSpeed:
-        desc = "切换二倍速";
+        action_desc = "切换二倍速";
+        break;
+    case BattleActionType::SkillDaemon:
+        action_desc = "摆完挂机";
+        break;
+    case BattleActionType::BulletTime:
+        action_desc = "子弹时间";
         break;
     }
-    details["description"] = desc;
+    details["action"] = action_desc;
+    details["doc"] = action.doc;
+    details["doc_color"] = action.doc_color;
     callback(AsstMsg::SubTaskExtraInfo, info);
 
     if (!wait_condition(action)) {
@@ -302,14 +353,21 @@ bool asst::BattleProcessTask::do_action(const BattleAction& action)
         ret = battle_speedup();
         break;
     case BattleActionType::BulletTime:
+        // TODO
         break;
     case BattleActionType::SkillUsage:
     {
         auto& oper_info = m_group_to_oper_mapping[action.group_name];
         oper_info.skill_usage = action.modify_usage;
         m_used_opers[oper_info.name].info.skill_usage = action.modify_usage;
-        return true;
+        ret = true;
     } break;
+    case BattleActionType::Output:
+        // DoNothing
+        break;
+    case BattleActionType::SkillDaemon:
+        ret = wait_to_end(action);
+        break;
     }
     sleep_with_possible_skill(action.rear_delay);
 
@@ -318,16 +376,47 @@ bool asst::BattleProcessTask::do_action(const BattleAction& action)
 
 bool asst::BattleProcessTask::wait_condition(const BattleAction& action)
 {
+    cv::Mat image;
+
+    // 因为要算基准cost，所以这个要放在kills前面
+    if (action.cost_changes != 0) {
+        int cost_base = -1;
+
+        while (true) {
+            image = m_ctrler->get_image();
+            BattleImageAnalyzer analyzer(image);
+            analyzer.set_target(BattleImageAnalyzer::Target::Cost);
+            if (analyzer.analyze()) {
+                int cost = analyzer.get_cost();
+                if (cost_base == -1) {
+                    cost_base = cost;
+                    continue;
+                }
+                if (cost >= cost_base + action.cost_changes) {
+                    break;
+                }
+            }
+
+            try_possible_skill(image);
+            std::this_thread::yield();
+        }
+    }
+
     while (m_kills < action.kills) {
         if (need_exit()) {
             return false;
         }
-        const auto& image = m_ctrler->get_image();
+        if (image.empty()) {
+            image = m_ctrler->get_image();
+        }
         BattleImageAnalyzer analyzer(image);
-
+        if (m_total_kills) {
+            analyzer.set_pre_total_kills(m_total_kills);
+        }
         analyzer.set_target(BattleImageAnalyzer::Target::Kills);
         if (analyzer.analyze()) {
             m_kills = analyzer.get_kills();
+            m_total_kills = analyzer.get_total_kills();
             if (m_kills >= action.kills) {
                 break;
             }
@@ -335,6 +424,7 @@ bool asst::BattleProcessTask::wait_condition(const BattleAction& action)
 
         try_possible_skill(image);
         std::this_thread::yield();
+        image = m_ctrler->get_image();
     }
 
     // 部署干员还有额外等待费用够或 CD 转好
@@ -344,7 +434,9 @@ bool asst::BattleProcessTask::wait_condition(const BattleAction& action)
             if (need_exit()) {
                 return false;
             }
-            const auto& image = m_ctrler->get_image();
+            if (image.empty()) {
+                image = m_ctrler->get_image();
+            }
             update_opers_info(image);
 
             if (auto iter = m_cur_opers_info.find(name);
@@ -354,7 +446,12 @@ bool asst::BattleProcessTask::wait_condition(const BattleAction& action)
 
             try_possible_skill(image);
             std::this_thread::yield();
-        };
+            image = m_ctrler->get_image();
+        }
+    }
+    if (image.empty()) {
+        image = m_ctrler->get_image();
+        try_possible_skill(image);
     }
 
     return true;
@@ -378,7 +475,12 @@ bool asst::BattleProcessTask::oper_deploy(const BattleAction& action)
     Point placed_point = m_side_tile_info[action.location].pos;
 
     Rect placed_rect{ placed_point.x ,placed_point.y, 1, 1 };
-    m_ctrler->swipe(oper_rect, placed_rect, swipe_oper_task_ptr->pre_delay);
+    int dist = static_cast<int>(
+        std::sqrt(
+            (std::abs(placed_point.x - oper_rect.x) << 1)
+            + (std::abs(placed_point.y - oper_rect.y) << 1)));
+    int duration = static_cast<int>(swipe_oper_task_ptr->pre_delay / 1000 * dist); // 随便取的一个系数
+    m_ctrler->swipe(oper_rect, placed_rect, duration, true, 0);
 
     sleep(use_oper_task_ptr->rear_delay);
 
@@ -406,7 +508,7 @@ bool asst::BattleProcessTask::oper_deploy(const BattleAction& action)
         end_point.y = std::max(0, end_point.y);
         end_point.y = std::min(end_point.y, WindowHeightDefault);
 
-        m_ctrler->swipe(placed_point, end_point, swipe_oper_task_ptr->rear_delay);
+        m_ctrler->swipe(placed_point, end_point, swipe_oper_task_ptr->rear_delay, true, 100);
     }
 
     m_used_opers[iter->first] = BattleDeployInfo{
@@ -424,45 +526,70 @@ bool asst::BattleProcessTask::oper_deploy(const BattleAction& action)
 bool asst::BattleProcessTask::oper_retreat(const BattleAction& action)
 {
     const std::string& name = m_group_to_oper_mapping[action.group_name].name;
-    auto iter = m_used_opers.find(name);
-    if (iter == m_used_opers.cend()) {
-        Log.error(name, " not used");
-        return false;
+    Point pos;
+    if (auto iter = m_used_opers.find(name);
+        action.location.x == 0 && action.location.y == 0 &&
+        iter != m_used_opers.cend()) {
+        pos = iter->second.pos;
+        m_used_opers.erase(iter);
     }
-    Point pos = iter->second.pos;
+    else {
+        pos = m_normal_tile_info.at(action.location).pos;
+    }
     m_ctrler->click(pos);
     sleep(Task.get("BattleUseOper")->pre_delay);
 
-    m_used_opers.erase(name);
-
-    return ProcessTask(*this, { "BattleOperRetreat" }).run();
+    return ProcessTask(*this, { "BattleOperRetreat" }).set_task_delay(0).run();
 }
 
 bool asst::BattleProcessTask::use_skill(const BattleAction& action)
 {
     const std::string& name = m_group_to_oper_mapping[action.group_name].name;
-    auto iter = m_used_opers.find(name);
-    if (iter == m_used_opers.cend()) {
-        Log.error(name, " not used");
-        return false;
+    Point pos;
+    if (auto iter = m_used_opers.find(name);
+        action.location.x == 0 && action.location.y == 0 &&
+        iter != m_used_opers.cend()) {
+        pos = iter->second.pos;
+    }
+    else {
+        pos = m_normal_tile_info.at(action.location).pos;
     }
 
-    Point pos = iter->second.pos;
     m_ctrler->click(pos);
     sleep(Task.get("BattleUseOper")->pre_delay);
 
-    return ProcessTask(*this, { "BattleSkillReadyOnClick" })
+    return ProcessTask(*this, { "BattleSkillReadyOnClick", "BattleSkillStopOnClick" })
         .set_task_delay(0)
         .set_retry_times(10000)
         .run();
 }
 
+bool asst::BattleProcessTask::wait_to_end(const BattleAction& action)
+{
+    std::ignore = action;
+
+    MatchImageAnalyzer officially_begin_analyzer;
+    officially_begin_analyzer.set_task_info("BattleOfficiallyBegin");
+    cv::Mat image;
+    while (!need_exit()) {
+        image = m_ctrler->get_image();
+        officially_begin_analyzer.set_image(image);
+        if (!officially_begin_analyzer.analyze()) {
+            break;
+        }
+        try_possible_skill(image);
+        std::this_thread::yield();
+    }
+    return true;
+}
+
 bool asst::BattleProcessTask::try_possible_skill(const cv::Mat& image)
 {
-    static const Rect& skill_roi_move = Task.get("BattleAutoSkillFlag")->rect_move;
+    auto task_ptr = Task.get("BattleAutoSkillFlag");
+    const Rect& skill_roi_move = task_ptr->rect_move;
 
     MatchImageAnalyzer analyzer(image);
-    analyzer.set_task_info("BattleAutoSkillFlag");
+    analyzer.set_task_info(task_ptr);
     bool used = false;
     for (auto& [name, info] : m_used_opers) {
         if (info.info.skill_usage != BattleSkillUsage::Possibly
@@ -475,6 +602,7 @@ bool asst::BattleProcessTask::try_possible_skill(const cv::Mat& image)
             continue;
         }
         m_ctrler->click(info.pos);
+        sleep(Task.get("BattleUseOper")->pre_delay);
         used |= ProcessTask(*this, { "BattleSkillReadyOnClick" }).set_task_delay(0).run();
         if (info.info.skill_usage == BattleSkillUsage::Once) {
             info.info.skill_usage = BattleSkillUsage::OnceUsed;
@@ -513,9 +641,4 @@ bool asst::BattleProcessTask::battle_pause()
 bool asst::BattleProcessTask::battle_speedup()
 {
     return ProcessTask(*this, { "BattleSpeedUp" }).run();
-}
-
-bool asst::BattleProcessTask::cancel_selection()
-{
-    return ProcessTask(*this, { "BattleCancelSelection" }).run();
 }

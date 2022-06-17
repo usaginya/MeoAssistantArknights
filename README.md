@@ -18,6 +18,8 @@
 </div>
 <br>
 
+[README in English](README-en.md)
+
 MAA 的意思是 MAA Assistant Arknights
 
 一款明日方舟游戏小助手
@@ -34,17 +36,28 @@ MAA 的意思是 MAA Assistant Arknights
 - 智能基建换班，自动计算干员效率，单设施内最优解
 - 自动公招，可选使用加急许可，一次全部刷完
 - 访问好友、收取信用及购物、领取日常奖励等。一键全日常自动长草！
-- **新功能！肉鸽全自动刷源石锭和蜡烛**
+- 肉鸽全自动刷源石锭和蜡烛，自动识别干员及练度
+- **新功能！导入作业 JSON 文件，自动抄作业！** [视频演示](https://www.bilibili.com/video/BV14u411673q/)
 
 话不多说，看图！  
 
-![image](https://user-images.githubusercontent.com/18511905/148376809-a80537b7-5e97-4978-959e-afada28c03c3.png)  
-![image](https://user-images.githubusercontent.com/18511905/152695664-382dc0cd-de6c-4012-890f-456f697e8724.png)  
+![image](https://user-images.githubusercontent.com/99072975/172044929-3aae01a1-6c6d-4a9a-a7a8-ae753679b9ce.png)
+![image](https://user-images.githubusercontent.com/99072975/172045492-698ab7fd-0413-4b08-aad7-0176f9480c05.png)
+![image](https://user-images.githubusercontent.com/99072975/172045163-e9ead337-eb62-4f9f-a354-9e302f767a52.png)
+
+
 
 ## 下载地址
 
 [稳定版](https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases/latest)  
-[测试版](https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases)
+[测试版](https://github.com/MaaAssistantArknights/MaaAssistantArknights/releases)  
+
+下载太慢？尝试使用 fastgit 镜像  
+
+[fastgit 镜像稳定版](https://hub.fastgit.xyz/MaaAssistantArknights/MaaAssistantArknights/releases/latest)  
+[fastgit 镜像测试版](https://hub.fastgit.xyz/MaaAssistantArknights/MaaAssistantArknights/releases)
+
+
 
 ## 使用说明
 
@@ -52,26 +65,34 @@ MAA 的意思是 MAA Assistant Arknights
 
 1. 请根据 [模拟器支持情况](docs/模拟器支持.md)，进行对应的操作。
 2. 解压压缩包，到 **没有中文或特殊符号** 的文件夹路径。
-3. 第一次运行软件，**请使用管理员权限** 打开 `MeoAsstGui.exe`。运行过一次后，后续不再需要管理员权限。
-4. 开始运行后，除 `自动关机` 外，所有设置均不可再修改。
+3. 开始运行后，除 `自动关机` 外，所有设置均不可再修改。
 
-目前仅对 `16:9` 分辨率支持较好，最低支持 `1280 * 720`，更高不限。非 `16:9` 分辨率可能会有奇奇怪怪的问题，正在进一步适配中_(:з」∠)_
+目前仅对 `16:9` 分辨率支持较好，最低支持 `1280 * 720`，更高不限。非 `16:9` 分辨率可能会有奇奇怪怪的问题，~~正在进一步适配中~~ 咕了_(:з」∠)_
 
 更多使用说明请参考 [详细介绍](docs/详细介绍.md)
 
 ## 常见问题
 
 - 软件一打开就闪退
-- 连接错误/捕获模拟器窗口错误
+- 连接错误、不知道 adb 路径怎么填写
 - 识别错误/任务开始后一直不动、没有反应
 - 如何连接自定义端口
 
 请参考 [常见问题](docs/常见问题.md)
 
-## 关联项目
+## 外服支持
 
-- 全新 GUI: [MaaAsstElectronUI](https://github.com/MaaAssistantArknights/MaaAsstElectronUI) （正在开发中）
-- 更新服务器: [MaaDownloadServer](https://github.com/MaaAssistantArknights/MaaDownloadServer)（正在开发中）
+- 美服  
+  支持基本的刷理智、公招识别功能，请参考 [说明](resource/global/YoStarEN/readme.md)
+- 其他服  
+  计划适配中……
+
+## 主要关联项目
+
+- 全新 GUI: [MaaAsstElectronUI](https://github.com/MaaAssistantArknights/MaaAsstElectronUI) （正在开发中，欢迎加入！）
+- 更新服务器: [MaaDownloadServer](https://github.com/MaaAssistantArknights/MaaDownloadServer) （正在开发中，欢迎加入！）
+- 自动战斗作业服务器: [MaaCopilotServer](https://github.com/MaaAssistantArknights/MaaCopilotServer) （正在开发中，欢迎加入！）
+- [MAA 官网!](https://www.maa.plus): [maa-website](https://github.com/MaaAssistantArknights/maa-website) （正在开发中，欢迎加入！）
 
 ## 致谢
 
@@ -94,7 +115,7 @@ MAA 的意思是 MAA Assistant Arknights
 
 ### 数据源
 
-- 公开招募数据：[明日方舟工具箱](https://www.bigfun.cn/tools/aktools/hr)
+- ~~公开招募数据：[明日方舟工具箱](https://www.bigfun.cn/tools/aktools/hr)~~
 - 干员及基建数据：[PRTS明日方舟中文WIKI](http://prts.wiki/)
 - 关卡数据：[企鹅物流数据统计](https://penguin-stats.cn/)
 - 材料数据：[明日方舟bot常用素材](https://github.com/yuanyan3060/Arknights-Bot-Resource)
@@ -109,7 +130,7 @@ MAA 的意思是 MAA Assistant Arknights
 
 ### Windows
 
-直接使用 Visual Studio 2022 ~~或更高版本~~ 打开 `MeoAssistantArknights.sln` 即可，所有环境都是配置好的
+直接使用 Visual Studio 2019 ~~或更高版本~~ 打开 `MeoAssistantArknights.sln` 即可，所有环境都是配置好的
 
 ### Linux | macOS
 
@@ -120,10 +141,17 @@ MAA 的意思是 MAA Assistant Arknights
 - [C 接口](include/AsstCaller.h)：[集成示例](tools/TestCaller/main.cpp)
 - [Python 接口](src/Python/asst.py)：[集成示例](src/Python/sample.py)
 - [Golang 接口](src/Golang/maa/)：[集成示例](src/Golang/cli.go)（已停止维护 orz）
-- [集成文档](docs/集成文档.md) 龟速更新中_(:з」∠)_
+- [Dart 接口](src/dart/)
+- [Java 接口](src/Java/Maaj/src/main/java/com/iguigui/maaj/easySample/MeoAssistant.java)：[集成示例](src/Java/Maaj/src/main/java/com/iguigui/maaj/easySample/MaaJavaSample.java)
+- [HTTP接口](src/Java/Maaj/Readme.md)
+- [集成文档](docs/集成文档.md)
 - [回调消息协议](docs/回调消息协议.md)
 - [任务流程协议](docs/任务流程协议.md)
-- [自动抄作业协议](docs/战斗流程协议.md) 功能正在开发中 ✿✿ヽ(°▽°)ノ✿
+- [自动抄作业协议](docs/战斗流程协议.md)
+
+### 对连 Git 都不熟悉的超级萌新，请看
+
+[写给萌新的发电全流程](docs/写给萌新的发电全流程.md)
 
 ## 声明
 
@@ -133,7 +161,8 @@ MAA 的意思是 MAA Assistant Arknights
 ## 广告
 
 [B 站直播间](https://live.bilibili.com/2808861)：每晚直播敲代码，近期很长一段时间应该都是在写本软件~  
-[舟无关技术交流群](https://jq.qq.com/?_wv=1027&k=ypbzXcA2)：内卷地狱！  
+[技术交流 & 吹水群](https://jq.qq.com/?_wv=1027&k=ypbzXcA2)：内卷地狱！（明日方舟弱相关）  
+[自动战斗 JSON 作业分享群](https://jq.qq.com/?_wv=1027&k=1giyMpPb)  
 [开发者群](https://jq.qq.com/?_wv=1027&k=JM9oCk3C)
 
-如果觉得软件对你有帮助，帮忙点个 Star 吧！~（网页最上方右上角的小星星），这就是对我最大的支持了！
+如果觉得软件对你有帮助，帮忙点个 Star 吧！~（网页最上方右上角的小星星），这就是对我们最大的支持了！

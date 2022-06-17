@@ -76,6 +76,20 @@ namespace MeoAsstGui
             }
         }
 
+        private string _updateUrl;
+
+        public string UpdateUrl
+        {
+            get
+            {
+                return _updateUrl;
+            }
+            set
+            {
+                SetAndNotify(ref _updateUrl, value);
+            }
+        }
+
         public FlowDocument UpdateInfoDocument
         {
             get
@@ -123,7 +137,6 @@ namespace MeoAsstGui
         /// 检查是否有已下载的更新包，如果有立即更新并重启进程
         /// </summary>
         /// <returns>操作成功返回 true，反之则返回 false</returns>
-
         public bool CheckAndUpdateNow()
         {
             if (UpdateTag == string.Empty
@@ -147,6 +160,10 @@ namespace MeoAsstGui
             // 解压
             try
             {
+                if (Directory.Exists(extractDir))
+                {
+                    Directory.Delete(extractDir, true);
+                }
                 System.IO.Compression.ZipFile.ExtractToDirectory(UpdatePackageName, extractDir);
             }
             catch (InvalidDataException)
@@ -218,10 +235,10 @@ namespace MeoAsstGui
         /// </summary>
         /// <returns>操作成功返回 true，反之则返回 false</returns>
 
-        public bool CheckAndDownloadUpdate()
+        public bool CheckAndDownloadUpdate(bool force = false)
         {
             // 检查更新
-            if (!CheckUpdate())
+            if (!CheckUpdate(force))
             {
                 return false;
             }
@@ -229,6 +246,8 @@ namespace MeoAsstGui
             UpdatePackageName = _assetsObject["name"].ToString();
             UpdateTag = _lastestJson["name"].ToString();
             UpdateInfo = _lastestJson["body"].ToString();
+            UpdateUrl = _lastestJson["html_url"].ToString();
+            //ToastNotification.get= _lastestJson["html_url"].ToString();
 
             var openUrlToastButton = (
                 text: "前往页面查看",
@@ -247,6 +266,7 @@ namespace MeoAsstGui
                 {
                     using (var toast = new ToastNotification("检测到新版本"))
                     {
+                        toast.ButtonSystemUrl = UpdateUrl;
                         toast.AppendContentText("正在后台下载……")
                             .AppendContentText("新版本: " + UpdateTag)
                             .AppendContentText("更新信息: " + UpdateInfo)
@@ -261,6 +281,7 @@ namespace MeoAsstGui
                 {
                     using (var toast = new ToastNotification("检测到新版本"))
                     {
+                        toast.ButtonSystemUrl = UpdateUrl;
                         toast.AppendContentText("新版本: " + UpdateTag)
                             .AppendContentText("更新信息: " + UpdateInfo)
                             .AddButtonLeft(openUrlToastButton.text, openUrlToastButton.action)
@@ -291,6 +312,7 @@ namespace MeoAsstGui
                 {
                     using (var toast = new ToastNotification("新版本下载失败"))
                     {
+                        toast.ButtonSystemUrl = UpdateUrl;
                         toast.AppendContentText("请尝试手动下载后，将压缩包放到目录下_(:з」∠)_")
                             .AddButtonLeft(openUrlToastButton.text, openUrlToastButton.action)
                             .Show();
@@ -306,7 +328,7 @@ namespace MeoAsstGui
                 {
                     toast.AppendContentText("软件将在下次启动时自动更新！")
                         .AppendContentText("✿✿ヽ(°▽°)ノ✿")
-                        .ShowUpdateVersion(row: 2);
+                        .ShowUpdateVersion(row: 3);
                 }
             });
 
@@ -318,10 +340,10 @@ namespace MeoAsstGui
         /// </summary>
         /// <returns>操作成功返回 true，反之则返回 false</returns>
 
-        public bool CheckUpdate()
+        public bool CheckUpdate(bool force = false)
         {
-            // 开发版不检查更新
-            if (!isStableVersion())
+            //开发版不检查更新
+            if (!force && !isStableVersion())
             {
                 return false;
             }
@@ -365,10 +387,25 @@ namespace MeoAsstGui
                 }
 
                 _latestVersion = _lastestJson["tag_name"].ToString();
-                if ((string.Compare(_latestVersion, _curVersion) <= 0) || (ViewStatusStorage.Get("VersionUpdate.Ignore", string.Empty) == _latestVersion))
+                if (ViewStatusStorage.Get("VersionUpdate.Ignore", string.Empty) == _latestVersion)
                 {
                     return false;
                 }
+
+                Semver.SemVersion curVersionObj;
+                bool curParsed = Semver.SemVersion.TryParse(_curVersion, Semver.SemVersionStyles.AllowLowerV, out curVersionObj);
+                Semver.SemVersion lastestVersionObj;
+                bool lastestPared = Semver.SemVersion.TryParse(_latestVersion, Semver.SemVersionStyles.AllowLowerV, out lastestVersionObj);
+                if (curParsed && lastestPared
+                    && curVersionObj >= lastestVersionObj)
+                {
+                    return false;
+                }
+                else if ((string.Compare(_curVersion, _latestVersion) >= 0))
+                {
+                    return false;
+                }
+
                 _assetsObject = _lastestJson["assets"][0] as JObject;
             }
             catch (Exception)
@@ -599,10 +636,10 @@ namespace MeoAsstGui
             return true;
         }
 
-        public bool ResourceOTA()
+        public bool ResourceOTA(bool force = false)
         {
             // 开发版不检查更新
-            if (!isStableVersion())
+            if (!force && !isStableVersion())
             {
                 return false;
             }
@@ -628,7 +665,9 @@ namespace MeoAsstGui
             var update_dict = new Dictionary<string, string>()
             {
                 { "resource/stages.json" , "resource/stages.json"},
-                { "resource/recruit.json", "resource/recruit.json" }
+                { "resource/recruit.json", "resource/recruit.json" },
+                { "3rdparty/resource/Arknights-Tile-Pos/levels.json" , "resource/Arknights-Tile-Pos/levels.json"},
+                { "resource/item_index.json", "resource/item_index.json" }
             };
 
             bool updated = false;
@@ -728,6 +767,8 @@ namespace MeoAsstGui
 
         private static void CopyFilesRecursively(string sourcePath, string targetPath)
         {
+            Directory.CreateDirectory(targetPath);
+
             //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
             {

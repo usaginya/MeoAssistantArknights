@@ -6,6 +6,8 @@
              xmlns:s="https://github.com/canton7/Stylet"
              xmlns:dd="urn:gong-wpf-dragdrop"
              mc:Ignorable="d"
+             xmlns:vm="clr-namespace:MeoAsstGui;assembly=MeoAsstGui"
+             d:DataContext="{d:DesignInstance {x:Type vm:SettingsViewModel}}"
              d:DesignHeight="150" d:DesignWidth="300">
     <Grid>
         <Grid.ColumnDefinitions>
@@ -23,6 +25,7 @@
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10">
+            <CheckBox IsChecked="{Binding NotChooseLevel1}" Content="手动确认1星" Margin="5" />
             <CheckBox IsChecked="{Binding ChooseLevel3}" Content="自动确认3星" Margin="5" />
             <CheckBox IsChecked="{Binding ChooseLevel4}" Content="自动确认4星" Margin="5" />
             <CheckBox IsChecked="{Binding ChooseLevel5}" Content="自动确认5星" Margin="5" />

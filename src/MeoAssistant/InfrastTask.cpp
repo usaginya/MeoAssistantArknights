@@ -14,7 +14,7 @@
 #include "DronesForShamareTaskPlugin.h"
 #include "ReplenishOriginiumShardTaskPlugin.h"
 
-asst::InfrastTask::InfrastTask(AsstCallback callback, void* callback_arg)
+asst::InfrastTask::InfrastTask(const AsstCallback& callback, void* callback_arg)
     : PackageTask(callback, callback_arg, TaskType),
     m_infrast_begin_task_ptr(std::make_shared<ProcessTask>(callback, callback_arg, TaskType)),
     m_info_task_ptr(std::make_shared<InfrastInfoTask>(callback, callback_arg, TaskType)),
@@ -27,7 +27,7 @@ asst::InfrastTask::InfrastTask(AsstCallback callback, void* callback_arg)
     m_dorm_task_ptr(std::make_shared<InfrastDormTask>(callback, callback_arg, TaskType))
 {
     m_infrast_begin_task_ptr->set_tasks({ "InfrastBegin" });
-    m_trade_task_ptr->regiseter_plugin<DronesForShamareTaskPlugin>();
+    m_trade_task_ptr->regiseter_plugin<DronesForShamareTaskPlugin>()->set_retry_times(0);
     m_replenish_task_ptr = m_mfg_task_ptr->regiseter_plugin<ReplenishOriginiumShardTaskPlugin>();
 
     m_subtasks.emplace_back(m_infrast_begin_task_ptr);
@@ -46,6 +46,7 @@ bool asst::InfrastTask::set_params(const json::value& params)
 
         m_subtasks.clear();
         append_infrast_begin();
+        m_subtasks.emplace_back(m_info_task_ptr);
 
         for (const auto& facility_json : params.at("facility").as_array()) {
             if (!facility_json.is_string()) {

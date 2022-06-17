@@ -12,8 +12,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Stylet;
 using StyletIoC;
 
@@ -34,6 +38,55 @@ namespace MeoAsstGui
             DisplayName = "一键长草";
             LogItemViewModels = new ObservableCollection<LogItemViewModel>();
             InitializeItems();
+            InitTimer();
+        }
+
+        public void ShowButton()
+        {
+            Visible = Visibility.Visible;
+            Hibernate = true;
+        }
+
+        private Visibility _visible = Visibility.Collapsed;
+
+        public Visibility Visible
+        {
+            get { return _visible; }
+            set
+            {
+                SetAndNotify(ref _visible, value);
+            }
+        }
+
+        private System.Windows.Forms.Timer _timer = new System.Windows.Forms.Timer();
+
+        private void InitTimer()
+        {
+            _timer.Enabled = true;
+            _timer.Interval = 1000 * 60;
+            _timer.Tick += new EventHandler(Timer1_Elapsed);
+            _timer.Start();
+        }
+
+        private void Timer1_Elapsed(object sender, EventArgs e)
+        {
+            int intMinute = DateTime.Now.Minute;
+
+            if (intMinute != 0 || Idle == false)
+            {
+                return;
+            }
+            UpdateDatePrompt();
+
+            int intHour = DateTime.Now.Hour;
+            var settings = _container.Get<SettingsViewModel>();
+            if (settings.Timer1 && settings.Timer1Hour == intHour ||
+                settings.Timer2 && settings.Timer2Hour == intHour ||
+                settings.Timer3 && settings.Timer3Hour == intHour ||
+                settings.Timer4 && settings.Timer4Hour == intHour)
+            {
+                LinkStart();
+            }
         }
 
         public void InitializeItems()
@@ -69,23 +122,35 @@ namespace MeoAsstGui
             {
                 new CombData { Display = "当前关卡", Value = string.Empty },
                 new CombData { Display = "上次作战", Value = "LastBattle" },
-                new CombData { Display = "剿灭作战", Value = "Annihilation" },
+
+                // SideStory「尘影余音」活动
+                new CombData { Display = "LE-7", Value = "LE-7" },
+                new CombData { Display = "LE-6", Value = "LE-6" },
+                new CombData { Display = "LE-5", Value = "LE-5" },
+
+                new CombData { Display = "1-7", Value = "1-7" },
                 new CombData { Display = "龙门币-6/5", Value = "CE-6" },
                 new CombData { Display = "经验-6/5", Value = "LS-6" },
                 new CombData { Display = "红票-5", Value = "AP-5" },
                 new CombData { Display = "技能-5", Value = "CA-5" },
-                new CombData { Display = "1-7", Value = "1-7" },
 
                 // “愚人号” 活动关卡
                 //new CombData { Display = "SN-8", Value = "SN-8" },
                 //new CombData { Display = "SN-9", Value = "SN-9" },
                 //new CombData { Display = "SN-10", Value = "SN-10" },
-                
+
                 //// “风雪过境” 活动关卡
                 //new CombData { Display = "BI-7", Value = "BI-7" },
                 //new CombData { Display = "BI-8", Value = "BI-8" }
             };
 
+            InitDrops();
+
+            UpdateDatePrompt();
+        }
+
+        public void UpdateDatePrompt()
+        {
             var now = DateTime.Now;
             var hour = now.Hour;
             if (hour >= 0 && hour < 4)
@@ -128,6 +193,26 @@ namespace MeoAsstGui
             LogItemViewModels.Clear();
         }
 
+        public void SelectedAll()
+        {
+            foreach (var item in TaskItemViewModels)
+            {
+                if (item.Name == "无限刷肉鸽")
+                    continue;
+                item.IsChecked = true;
+            }
+        }
+
+        public void InverseSelected()
+        {
+            foreach (var item in TaskItemViewModels)
+            {
+                if (item.Name == "无限刷肉鸽")
+                    continue;
+                item.IsChecked = !item.IsChecked;
+            }
+        }
+
         public async void LinkStart()
         {
             Idle = false;
@@ -139,14 +224,15 @@ namespace MeoAsstGui
             AddLog("正在连接模拟器……");
 
             var asstProxy = _container.Get<AsstProxy>();
+            string errMsg = "";
             var task = Task.Run(() =>
             {
-                return asstProxy.AsstConnect();
+                return asstProxy.AsstConnect(ref errMsg);
             });
             bool catchd = await task;
             if (!catchd)
             {
-                AddLog("连接模拟器失败\n请检查连接设置", "darkred");
+                AddLog(errMsg, "darkred");
                 Idle = true;
                 return;
             }
@@ -172,7 +258,7 @@ namespace MeoAsstGui
                 }
                 else if (item.Name == "开始唤醒")
                 {
-                    ret &= asstProxy.AsstAppendStartUp();
+                    ret &= appendStart();
                 }
                 else if (item.Name == "刷理智")
                 {
@@ -247,6 +333,19 @@ namespace MeoAsstGui
             ViewStatusStorage.Set("MainFunction.UseStone.Quantity", StoneNumber);
             // 指定刷关次数
             ViewStatusStorage.Set("MainFunction.TimesLimited.Quantity", MaxTimes);
+            // 指定掉落材料
+            ViewStatusStorage.Set("MainFunction.Drops.ItemId", DropsItemId);
+            // 指定掉落材料数量
+            ViewStatusStorage.Set("MainFunction.Drops.Quantity", DropsQuantity);
+        }
+
+        private bool appendStart()
+        {
+            var settings = _container.Get<SettingsViewModel>();
+            var asstProxy = _container.Get<AsstProxy>();
+            var mode = settings.ClientType;
+            var enable = mode.Length != 0;
+            return asstProxy.AsstAppendStartUp(mode, enable);
         }
 
         private bool appendFight()
@@ -275,9 +374,17 @@ namespace MeoAsstGui
                     times = 0;
                 }
             }
+            int drops_quantity = 0;
+            if (IsSpecifiedDrops)
+            {
+                if (!int.TryParse(DropsQuantity, out drops_quantity))
+                {
+                    drops_quantity = 0;
+                }
+            }
 
             var asstProxy = _container.Get<AsstProxy>();
-            return asstProxy.AsstAppendFight(Stage, medicine, stone, times);
+            return asstProxy.AsstAppendFight(Stage, medicine, stone, times, DropsItemId, drops_quantity);
         }
 
         private bool appendInfrast()
@@ -334,7 +441,7 @@ namespace MeoAsstGui
 
             var asstProxy = _container.Get<AsstProxy>();
             return asstProxy.AsstAppendRecruit(
-                max_times, reqList.ToArray(), reqList.Count, cfmList.ToArray(), cfmList.Count, need_refresh, use_expedited);
+                max_times, reqList.ToArray(), reqList.Count, cfmList.ToArray(), cfmList.Count, need_refresh, use_expedited, settings.NotChooseLevel1);
         }
 
         private bool appendRoguelike()
@@ -359,6 +466,14 @@ namespace MeoAsstGui
                     System.Diagnostics.Process.Start("shutdown.exe", "-a");
                 }
             }
+            if (Hibernate)
+            {
+                System.Diagnostics.Process.Start("shutdown.exe", "-h");
+            }
+            if (Suspend)
+            {
+                System.Diagnostics.Process.Start("rundll32.exe", "powrprof.dll,SetSuspendState 0,1,0");
+            }
         }
 
         private bool _idle = false;
@@ -382,6 +497,46 @@ namespace MeoAsstGui
             set
             {
                 SetAndNotify(ref _shutdown, value);
+
+                if (value)
+                {
+                    Hibernate = false;
+                    Suspend = false;
+                }
+            }
+        }
+
+        private bool _hibernate = false;  // 休眠
+
+        public bool Hibernate
+        {
+            get { return _hibernate; }
+            set
+            {
+                SetAndNotify(ref _hibernate, value);
+
+                if (value)
+                {
+                    Shutdown = false;
+                    Suspend = false;
+                }
+            }
+        }
+
+        private bool _suspend = false;  // 待机
+
+        public bool Suspend
+        {
+            get { return _suspend; }
+            set
+            {
+                SetAndNotify(ref _suspend, value);
+
+                if (value)
+                {
+                    Shutdown = false;
+                    Hibernate = false;
+                }
             }
         }
 
@@ -467,6 +622,124 @@ namespace MeoAsstGui
             set
             {
                 SetAndNotify(ref _maxTimes, value);
+            }
+        }
+
+        private bool _isSpecifiedDrops = System.Convert.ToBoolean(ViewStatusStorage.Get("MainFunction.Drops.Enable", bool.FalseString));
+
+        public bool IsSpecifiedDrops
+        {
+            get { return _isSpecifiedDrops; }
+            set
+            {
+                SetAndNotify(ref _isSpecifiedDrops, value);
+                ViewStatusStorage.Set("MainFunction.Drops.Enable", value.ToString());
+            }
+        }
+
+        private static readonly string _DropsFilename = System.Environment.CurrentDirectory + "\\resource\\item_index.json";
+
+        public List<CombData> AllDrops { get; set; } = new List<CombData>();
+
+        private void InitDrops()
+        {
+            string jsonStr = File.ReadAllText(_DropsFilename);
+            var reader = (JObject)JsonConvert.DeserializeObject(jsonStr);
+            foreach (var item in reader)
+            {
+                var val = item.Key;
+                if (!int.TryParse(val, out _))  // 不是数字的东西都是正常关卡不会掉的（大概吧）
+                {
+                    continue;
+                }
+                var dis = item.Value["name"].ToString();
+                if (dis.EndsWith("双芯片") || dis.EndsWith("寻访凭证") || dis.EndsWith("加固建材")
+                    || dis.EndsWith("许可") || dis == "资质凭证" || dis == "高级凭证" || dis == "演习券"
+                    || dis.Contains("源石") || dis == "D32钢" || dis == "双极纳米片" || dis == "聚合剂"
+                    || dis == "晶体电子单元" || dis == "龙骨" || dis == "芯片助剂")
+                {
+                    continue;
+                }
+
+                AllDrops.Add(new CombData { Display = dis, Value = val });
+            }
+            AllDrops.Sort((a, b) =>
+            {
+                return a.Value.CompareTo(b.Value);
+            });
+            DropsList = new ObservableCollection<CombData>(AllDrops);
+        }
+
+        public ObservableCollection<CombData> DropsList { get; set; }
+
+        private string _dropsItemId = ViewStatusStorage.Get("MainFunction.Drops.ItemId", "0");
+
+        public string DropsItemId
+        {
+            get { return _dropsItemId; }
+            set
+            {
+                SetAndNotify(ref _dropsItemId, value);
+            }
+        }
+
+        private string _dropsItem = "";
+        private bool _isFirstLoadDropItem = true;
+        private long _preSetDropsItemTicks = 0;
+
+        public string DropsItem
+        {
+            get { return _dropsItem; }
+            set
+            {
+                if (_isFirstLoadDropItem)
+                {
+                    _isFirstLoadDropItem = false;
+                }
+                else
+                {
+                    IsDropDown = true;
+                }
+
+                // 这里有个很严重的死循环性能问题，不知道怎么解决，简单做个消抖好了_(:з」∠)_
+                if (DateTime.Now.Ticks - _preSetDropsItemTicks < 50)
+                {
+                    return;
+                }
+                _preSetDropsItemTicks = DateTime.Now.Ticks;
+
+                DropsList.Clear();
+                foreach (CombData drop in AllDrops)
+                {
+                    var enumStr = drop.Display;
+                    if (enumStr.Contains(value))
+                    {
+                        DropsList.Add(drop);
+                    }
+                }
+                SetAndNotify(ref _dropsItem, value);
+            }
+        }
+
+        private bool _isDropDown = false;
+
+        public bool IsDropDown
+        {
+            get { return _isDropDown; }
+            set
+            {
+                SetAndNotify(ref _isDropDown, value);
+            }
+        }
+
+        private string _dropsQuantity = ViewStatusStorage.Get("MainFunction.Drops.Quantity", "5");
+
+        public string DropsQuantity
+        {
+            get { return _dropsQuantity; }
+            set
+            {
+                SetAndNotify(ref _dropsQuantity, value);
             }
         }
     }

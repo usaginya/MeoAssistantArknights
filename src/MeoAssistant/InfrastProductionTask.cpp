@@ -319,7 +319,7 @@ bool asst::InfrastProductionTask::optimal_calc()
         // 条件判断，不符合的直接过滤掉
         bool meet_condition = true;
         for (const auto& [cond, cond_value] : group.conditions) {
-            auto cond_opt = m_status->get_data(cond);
+            auto cond_opt = m_status->get_number(cond);
             if (!cond_opt) {
                 continue;
             }
@@ -614,7 +614,7 @@ asst::InfrastProductionTask::efficient_regex_calc(
                 // TODO 报错！
             }
             std::string status_key = cur_formula.substr(pos + 1, rp_pos - pos - 1);
-            auto status_opt = m_status->get_data(status_key);
+            auto status_opt = m_status->get_number(status_key);
             const int64_t status_value = status_opt ? status_opt.value() : 0;
             cur_formula.replace(pos, rp_pos - pos + 1, std::to_string(status_value));
         }
@@ -638,7 +638,7 @@ bool asst::InfrastProductionTask::facility_list_detect()
     if (!mm_analyzer.analyze()) {
         return false;
     }
-    mm_analyzer.sort_result();
+    mm_analyzer.sort_result_horizontal();
     m_facility_list_tabs.reserve(mm_analyzer.get_result().size());
     for (const auto& res : mm_analyzer.get_result()) {
         m_facility_list_tabs.emplace_back(res.rect);

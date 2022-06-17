@@ -115,18 +115,16 @@ namespace MeoAsstGui
         public async void StartCalc()
         {
             var asstProxy = _container.Get<AsstProxy>();
+            string errMsg = "";
+            RecruitInfo = "正在连接模拟器……";
+            var task = Task.Run(() =>
+            {
+                return asstProxy.AsstConnect(ref errMsg);
+            });
+            _catched = await task;
             if (!_catched)
             {
-                RecruitInfo = "正在连接模拟器……";
-                var task = Task.Run(() =>
-                {
-                    return asstProxy.AsstConnect();
-                });
-                _catched = await task;
-            }
-            if (!_catched)
-            {
-                RecruitInfo = "连接模拟器失败，请检查连接设置";
+                RecruitInfo = errMsg;
                 return;
             }
             RecruitInfo = "正在识别……";

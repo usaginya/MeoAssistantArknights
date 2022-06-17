@@ -40,7 +40,7 @@ bool asst::TaskData::parse(const json::value& json)
     for (const auto& [name, task_json] : json.as_object()) {
         std::string algorithm_str = task_json.get("algorithm", "matchtemplate");
         std::transform(algorithm_str.begin(), algorithm_str.end(), algorithm_str.begin(), to_lower);
-        AlgorithmType algorithm = AlgorithmType::Invalid;
+        auto algorithm = AlgorithmType::Invalid;
         if (algorithm_str == "matchtemplate") {
             algorithm = AlgorithmType::MatchTemplate;
         }
@@ -160,8 +160,11 @@ bool asst::TaskData::parse(const json::value& json)
                 task_info_ptr->exceeded_next.emplace_back(excceed_next.as_string());
             }
         }
-        else {
-            task_info_ptr->exceeded_next.emplace_back("Stop");
+        if (task_json.contains("onErrorNext")) {
+            const json::array& on_error_next_arr = task_json.at("onErrorNext").as_array();
+            for (const json::value& on_error_next : on_error_next_arr) {
+                task_info_ptr->on_error_next.emplace_back(on_error_next.as_string());
+            }
         }
         task_info_ptr->pre_delay = task_json.get("preDelay", 0);
         task_info_ptr->rear_delay = task_json.get("rearDelay", 0);
@@ -189,11 +192,19 @@ bool asst::TaskData::parse(const json::value& json)
             task_info_ptr->roi = Rect();
         }
 
+        if (task_json.contains("sub")) {
+            for (const json::value& sub : task_json.at("sub").as_array()) {
+                task_info_ptr->sub.emplace_back(sub.as_string());
+            }
+        }
+        task_info_ptr->sub_error_ignored = task_json.get("subErrorIgnored", false);
+
         if (task_json.contains("next")) {
             for (const json::value& next : task_json.at("next").as_array()) {
                 task_info_ptr->next.emplace_back(next.as_string());
             }
         }
+
         if (task_json.contains("rectMove")) {
             const json::array& move_arr = task_json.at("rectMove").as_array();
             task_info_ptr->rect_move = Rect(

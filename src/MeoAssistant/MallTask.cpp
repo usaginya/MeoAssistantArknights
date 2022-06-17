@@ -3,7 +3,7 @@
 #include "ProcessTask.h"
 #include "CreditShoppingTask.h"
 
-asst::MallTask::MallTask(AsstCallback callback, void* callback_arg)
+asst::MallTask::MallTask(const AsstCallback& callback, void* callback_arg)
     : PackageTask(callback, callback_arg, TaskType),
     m_mall_task_ptr(std::make_shared<ProcessTask>(callback, callback_arg, TaskType)),
     m_shopping_first_task_ptr(std::make_shared<CreditShoppingTask>(callback, callback_arg, TaskType)),
@@ -26,8 +26,8 @@ bool asst::MallTask::set_params(const json::value& params)
         if (params.contains("buy_first") && params.at("buy_first").is_array()) {
             std::vector<std::string> buy_first;
             for (auto& name : params.at("buy_first").as_array()) {
-                std::string name_str = name.as_string();
-                if (!name_str.empty()) {
+                if (std::string name_str = name.as_string();
+                    !name_str.empty()) {
                     buy_first.emplace_back(name_str);
                 }
             }
@@ -46,7 +46,10 @@ bool asst::MallTask::set_params(const json::value& params)
         if (params.contains("blacklist") && params.at("blacklist").is_array()) {
             std::vector<std::string> shopping_list;
             for (auto& name : params.at("blacklist").as_array()) {
-                shopping_list.emplace_back(name.as_string());
+                if (std::string name_str = name.as_string();
+                    !name_str.empty()) {
+                    shopping_list.emplace_back(name.as_string());
+                }
             }
             m_shopping_task_ptr->set_black_list(std::move(shopping_list));
         }

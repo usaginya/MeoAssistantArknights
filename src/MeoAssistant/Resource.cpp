@@ -13,20 +13,20 @@ bool asst::Resource::load(const std::string& dir)
 {
     LogTraceFunction;
 
-    constexpr static const char* TemplsFilename = "template";
-    constexpr static const char* GeneralCfgFilename = "config.json";
-    constexpr static const char* TaskDataFilename = "tasks.json";
-    constexpr static const char* CombatRecruitCfgFilename = "combat_recruit.json";
-    constexpr static const char* RecruitCfgFilename = "recruit.json";
-    constexpr static const char* ItemCfgFilename = "item_index.json";
-    constexpr static const char* InfrastCfgFilename = "infrast.json";
-    constexpr static const char* InfrastTempls = "template/infrast";
-    constexpr static const char* CopilotCfgDirname = "copilot";
-    constexpr static const char* RoguelikeCfgDirname = "roguelike";
-    constexpr static const char* OcrResourceFilename = "PaddleOCR";
-    constexpr static const char* TilesCalcResourceFilename = "Arknights-Tile-Pos";
-    constexpr static const char* StageDropsCfgFilename = "stages.json";
-    constexpr static const char* StageDropsTempls = "template/items";
+    constexpr static auto TemplsFilename = "template";
+    constexpr static auto GeneralCfgFilename = "config.json";
+    constexpr static auto TaskDataFilename = "tasks.json";
+    constexpr static auto RoguelikeRecruitCfgFilename = "roguelike_recruit.json";
+    constexpr static auto RecruitCfgFilename = "recruit.json";
+    constexpr static auto ItemCfgFilename = "item_index.json";
+    constexpr static auto InfrastCfgFilename = "infrast.json";
+    constexpr static auto InfrastTempls = "template/infrast";
+    //constexpr static const char* CopilotCfgDirname = "copilot";
+    constexpr static auto RoguelikeCfgDirname = "roguelike";
+    constexpr static auto OcrResourceFilename = "PaddleOCR";
+    constexpr static auto TilesCalcResourceFilename = "Arknights-Tile-Pos";
+    constexpr static auto StageDropsCfgFilename = "stages.json";
+    constexpr static auto StageDropsTempls = "template/items";
 
     bool overload = false;
 
@@ -61,9 +61,9 @@ bool asst::Resource::load(const std::string& dir)
         overload = true;
     }
 
-    if (!m_combatrecruit_cfg_unique_ins.load(dir + CombatRecruitCfgFilename)) {
+    if (!m_roguelike_recruit_cfg_unique_ins.load(dir + RoguelikeRecruitCfgFilename)) {
         if (!m_loaded) {
-            m_last_error = std::string(CombatRecruitCfgFilename) + ": " + m_combatrecruit_cfg_unique_ins.get_last_error();
+            m_last_error = std::string(RoguelikeRecruitCfgFilename) + ": " + m_roguelike_recruit_cfg_unique_ins.get_last_error();
             return false;
         }
     }
@@ -81,23 +81,25 @@ bool asst::Resource::load(const std::string& dir)
         overload = true;
     }
 
-    for (const auto& entry : std::filesystem::directory_iterator(dir + CopilotCfgDirname)) {
-        if (entry.path().extension() != ".json") {
-            continue;
-        }
-        if (!m_copilot_cfg_unique_ins.load(entry.path().string())) {
-            m_last_error = entry.path().string() + " Load failed";
-            return false;
-        }
-    }
+    //for (const auto& entry : std::filesystem::directory_iterator(dir + CopilotCfgDirname)) {
+    //    if (entry.path().extension() != ".json") {
+    //        continue;
+    //    }
+    //    if (!m_copilot_cfg_unique_ins.load(entry.path().string())) {
+    //        m_last_error = entry.path().string() + " Load failed";
+    //        return false;
+    //    }
+    //}
 
-    for (const auto& entry : std::filesystem::directory_iterator(dir + RoguelikeCfgDirname)) {
-        if (entry.path().extension() != ".json") {
-            continue;
-        }
-        if (!m_roguelike_cfg_unique_ins.load(entry.path().string())) {
-            m_last_error = entry.path().string() + " Load failed";
-            return false;
+    if (std::filesystem::exists(dir + RoguelikeCfgDirname)) {
+        for (const auto& entry : std::filesystem::directory_iterator(dir + RoguelikeCfgDirname)) {
+            if (entry.path().extension() != ".json") {
+                continue;
+            }
+            if (!m_roguelike_cfg_unique_ins.load(entry.path().string())) {
+                m_last_error = entry.path().string() + " Load failed";
+                return false;
+            }
         }
     }
 
