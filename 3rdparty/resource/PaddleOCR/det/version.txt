@@ -1,1 +1,0 @@
-ch_PP-OCRv2_det_infer
